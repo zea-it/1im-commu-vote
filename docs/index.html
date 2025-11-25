@@ -5,67 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vote Gallery</title>
     <style>
+        /* CSS เดิม */
         body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
         h1 { color: #7289da; }
         #timer { font-size: 1.5em; color: #ff5555; margin-bottom: 20px; font-weight: bold; }
-        
-        .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .card {
-            background: #2c2f33;
-            border-radius: 10px;
-            overflow: hidden;
-            transition: transform 0.2s;
-            position: relative;
-            border: 2px solid transparent;
-        }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: #2c2f33; border-radius: 10px; overflow: hidden; transition: transform 0.2s; position: relative; border: 2px solid transparent; }
         .card:hover { transform: translateY(-5px); border-color: #7289da; }
-        
-        .card img {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-            cursor: pointer;
-        }
-
+        .card img { width: 100%; height: 250px; object-fit: cover; cursor: pointer; }
         .info { padding: 10px; }
         .author { font-weight: bold; color: #ddd; }
-        
-        .vote-btn {
-            background: #7289da;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 5px;
-            font-size: 1em;
-        }
+        .vote-btn { background: #7289da; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 5px; font-size: 1em; }
         .vote-btn:disabled { background: #555; cursor: not-allowed; }
         .vote-btn.voted { background: #43b581; }
-
-        .votes-count {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.9em;
-        }
-
-        /* Modal Image */
+        .votes-count { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; font-size: 0.9em; }
         .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
         .modal-content { margin: auto; display: block; max-width: 90%; max-height: 90vh; margin-top: 5vh; }
         .close { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
-
     </style>
 </head>
 <body>
@@ -75,21 +31,21 @@
     <div id="status"></div>
 
     <div class="gallery" id="gallery">
-        <!-- Images will load here -->
         <p>กำลังดึงข้อมูล...</p>
     </div>
 
-    <!-- Modal for full size image -->
     <div id="modal" class="modal">
         <span class="close" onclick="closeModal()">&times;</span>
         <img class="modal-content" id="img01">
     </div>
 
 <script>
-    // --- ตั้งค่า URL ที่นี่ ---
-    const SCRIPT_URL = "วาง_GOOGLE_APPS_SCRIPT_URL_ที่นี่"; 
+    // ==========================================
+    // 🔴 ตั้งค่า URL ที่นี่ (สำคัญมาก!) 🔴
+    // นำ URL ที่ได้จากการ Deploy Google Apps Script มาวางตรงนี้
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydeQbYoWLthhNRvoXdLjxStJs4MCJdf8B5CkIbCP3vmaa4JomOd5QaLKbsKarqFhAg/exec"; 
+    // ==========================================
 
-    // สร้าง ID สำหรับ User เครื่องนี้ (เก็บไว้ใน Browser)
     let USER_ID = localStorage.getItem("vote_user_id");
     if (!USER_ID) {
         USER_ID = 'user_' + Math.random().toString(36).substr(2, 9);
@@ -99,14 +55,17 @@
     let isVotingOpen = false;
 
     async function loadData() {
+        if (SCRIPT_URL.includes("วาง_WEB_APP_URL")) {
+            document.getElementById("gallery").innerHTML = "<p style='color:red'>⚠️ ยังไม่ได้ใส่ URL Google Script ในไฟล์ index.html</p>";
+            return;
+        }
+
         try {
             const response = await fetch(SCRIPT_URL);
             const data = await response.json();
             
-            // จัดการเวลา
             handleTimer(data.endTime);
             
-            // แสดงผลรูปภาพ
             const gallery = document.getElementById("gallery");
             gallery.innerHTML = "";
 
@@ -133,7 +92,7 @@
 
         } catch (error) {
             console.error(error);
-            document.getElementById("gallery").innerHTML = "<p style='color:red'>โหลดข้อมูลล้มเหลว ตรวจสอบ URL Script</p>";
+            document.getElementById("gallery").innerHTML = "<p style='color:red'>โหลดข้อมูลล้มเหลว (ตรวจสอบ Console)</p>";
         }
     }
 
@@ -178,7 +137,6 @@
         btn.disabled = true;
         btn.innerText = "กำลังส่ง...";
 
-        // ส่งข้อมูลแบบ Plain Text เพื่อเลี่ยง CORS preflight issues ในบาง Browser
         const payload = JSON.stringify({
             action: "vote",
             user_id: USER_ID,
@@ -187,12 +145,10 @@
 
         fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // สำคัญ: ใช้ no-cors แต่ส่ง text
+            mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain' },
             body: payload
         }).then(() => {
-            // เนื่องจาก no-cors เราอ่าน response ไม่ได้ แต่ให้สมมติว่าสำเร็จถ้าไม่ error
-            // เพื่อความชัวร์เราโหลดหน้าใหม่เพื่อดูคะแนนอัพเดท
             alert("บันทึกโหวตเรียบร้อย!");
             location.reload(); 
         }).catch(err => {
@@ -202,18 +158,14 @@
         });
     }
 
-    // Modal Logic
     function openModal(src) {
-        const modal = document.getElementById("modal");
-        const modalImg = document.getElementById("img01");
-        modal.style.display = "block";
-        modalImg.src = src;
+        document.getElementById("modal").style.display = "block";
+        document.getElementById("img01").src = src;
     }
     function closeModal() {
         document.getElementById("modal").style.display = "none";
     }
 
-    // Load data on start
     loadData();
 </script>
 
