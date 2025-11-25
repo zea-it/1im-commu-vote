@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote Gallery</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        h1 { color: #7289da; }
+        #timer { font-size: 1.5em; color: #ff5555; margin-bottom: 20px; font-weight: bold; }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #2c2f33;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            position: relative;
+            border: 2px solid transparent;
+        }
+        .card:hover { transform: translateY(-5px); border-color: #7289da; }
+        
+        .card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .info { padding: 10px; }
+        .author { font-weight: bold; color: #ddd; }
+        
+        .vote-btn {
+            background: #7289da;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 5px;
+            font-size: 1em;
+        }
+        .vote-btn:disabled { background: #555; cursor: not-allowed; }
+        .vote-btn.voted { background: #43b581; }
+
+        .votes-count {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        /* Modal Image */
+        .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
+        .modal-content { margin: auto; display: block; max-width: 90%; max-height: 90vh; margin-top: 5vh; }
+        .close { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <h1>🏆 การประกวดและโหวตผลงาน</h1>
+    <div id="timer">กำลังโหลดเวลา...</div>
+    <div id="status"></div>
+
+    <div class="gallery" id="gallery">
+        <!-- Images will load here -->
+        <p>กำลังดึงข้อมูล...</p>
+    </div>
+
+    <!-- Modal for full size image -->
+    <div id="modal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="img01">
+    </div>
+
+<script>
+    // --- ตั้งค่า URL ที่นี่ ---
+    const SCRIPT_URL = "วาง_GOOGLE_APPS_SCRIPT_URL_ที่นี่"; 
+
+    // สร้าง ID สำหรับ User เครื่องนี้ (เก็บไว้ใน Browser)
+    let USER_ID = localStorage.getItem("vote_user_id");
+    if (!USER_ID) {
+        USER_ID = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("vote_user_id", USER_ID);
+    }
+
+    let isVotingOpen = false;
+
+    async function loadData() {
+        try {
+            const response = await fetch(SCRIPT_URL);
+            const data = await response.json();
+            
+            // จัดการเวลา
+            handleTimer(data.endTime);
+            
+            // แสดงผลรูปภาพ
+            const gallery = document.getElementById("gallery");
+            gallery.innerHTML = "";
+
+            if (data.entries.length === 0) {
+                gallery.innerHTML = "<p>ยังไม่มีข้อมูลการโหวตในขณะนี้</p>";
+                return;
+            }
+
+            data.entries.forEach(item => {
+                const voteCount = data.votes[item.id] || 0;
+                
+                const card = document.createElement("div");
+                card.className = "card";
+                card.innerHTML = `
+                    <div class="votes-count">⭐ ${voteCount}</div>
+                    <img src="${item.url}" onclick="openModal('${item.url}')" onerror="this.src='https://via.placeholder.com/300?text=Error'">
+                    <div class="info">
+                        <div class="author">By: ${item.author}</div>
+                        <button class="vote-btn" id="btn-${item.id}" onclick="vote('${item.id}')">โหวตให้รูปนี้</button>
+                    </div>
+                `;
+                gallery.appendChild(card);
+            });
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById("gallery").innerHTML = "<p style='color:red'>โหลดข้อมูลล้มเหลว ตรวจสอบ URL Script</p>";
+        }
+    }
+
+    function handleTimer(endTimeStr) {
+        const timerElem = document.getElementById("timer");
+        const endTime = new Date(endTimeStr).getTime();
+        
+        const interval = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = endTime - now;
+
+            if (distance < 0) {
+                clearInterval(interval);
+                timerElem.innerHTML = "❌ ปิดการโหวตแล้ว";
+                isVotingOpen = false;
+                disableAllButtons();
+            } else {
+                isVotingOpen = true;
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                timerElem.innerHTML = `⏰ ปิดโหวตใน: ${hours}ชม. ${minutes}น. ${seconds}วิ.`;
+            }
+        }, 1000);
+    }
+
+    function disableAllButtons() {
+        const btns = document.querySelectorAll(".vote-btn");
+        btns.forEach(b => {
+            b.disabled = true;
+            b.innerText = "ปิดโหวต";
+        });
+    }
+
+    function vote(itemId) {
+        if (!isVotingOpen) {
+            alert("หมดเวลาโหวตแล้วครับ");
+            return;
+        }
+        
+        const btn = document.getElementById(`btn-${itemId}`);
+        btn.disabled = true;
+        btn.innerText = "กำลังส่ง...";
+
+        // ส่งข้อมูลแบบ Plain Text เพื่อเลี่ยง CORS preflight issues ในบาง Browser
+        const payload = JSON.stringify({
+            action: "vote",
+            user_id: USER_ID,
+            voted_for_id: itemId
+        });
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // สำคัญ: ใช้ no-cors แต่ส่ง text
+            headers: { 'Content-Type': 'text/plain' },
+            body: payload
+        }).then(() => {
+            // เนื่องจาก no-cors เราอ่าน response ไม่ได้ แต่ให้สมมติว่าสำเร็จถ้าไม่ error
+            // เพื่อความชัวร์เราโหลดหน้าใหม่เพื่อดูคะแนนอัพเดท
+            alert("บันทึกโหวตเรียบร้อย!");
+            location.reload(); 
+        }).catch(err => {
+            alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+            btn.disabled = false;
+            btn.innerText = "โหวตให้รูปนี้";
+        });
+    }
+
+    // Modal Logic
+    function openModal(src) {
+        const modal = document.getElementById("modal");
+        const modalImg = document.getElementById("img01");
+        modal.style.display = "block";
+        modalImg.src = src;
+    }
+    function closeModal() {
+        document.getElementById("modal").style.display = "none";
+    }
+
+    // Load data on start
+    loadData();
+</script>
+
+</body>
+</html>
