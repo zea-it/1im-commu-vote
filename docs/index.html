@@ -38,6 +38,52 @@
             line-height: 1.6;
         }
 
+        /* --- เพิ่ม CSS สำหรับ User Bar (Discord Login) --- */
+        .user-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 0 10px;
+            position: absolute; /* ลอยมุมขวาบน */
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        @media (max-width: 600px) {
+            .user-bar { position: static; justify-content: center; margin-bottom: 20px; }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 5px 15px 5px 5px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
+        }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; }
+        .user-name { font-weight: 500; color: #333; font-size: 0.9em; }
+        
+        .login-btn {
+            background: #5865F2; /* Discord Color */
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 0.9em;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(88, 101, 242, 0.3);
+        }
+        .login-btn:hover { background: #4752c4; transform: translateY(-2px); }
+        /* -------------------------------------------------- */
+
         h1 {
             color: var(--primary-color);
             font-weight: 600;
@@ -45,6 +91,7 @@
             margin-bottom: 10px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
+            margin-top: 30px; /* เพิ่มระยะห่างข้างบนเผื่อติดปุ่ม Login */
         }
         
         h1 i { margin-right: 10px; }
@@ -70,7 +117,7 @@
             gap: 30px;
             max-width: 1280px;
             margin: 0 auto;
-            min-height: 300px; /* กันพื้นที่ไว้สำหรับ Loader */
+            min-height: 300px;
             position: relative;
         }
 
@@ -177,7 +224,7 @@
             to {transform:scale(1); opacity:1}
         }
 
-        /* --- Loading Spinner Animation --- */
+        /* Loading Spinner */
         .loading-container {
             position: absolute;
             top: 50%;
@@ -200,22 +247,20 @@
             margin-bottom: 15px;
         }
 
-        .loading-text { 
-            font-size: 1.2em; 
-            color: #888; 
-            font-weight: 300;
-        }
+        .loading-text { font-size: 1.2em; color: #888; font-weight: 300; }
         
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
+    <!-- ส่วนแสดงปุ่ม Login Discord (เพิ่มเข้ามา) -->
+    <div class="user-bar" id="userBar"></div>
+
     <h1><i class="fa-solid fa-square-poll-vertical"></i> 1IM Community Vote System</h1>
     <div id="timer"><i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลด...</div>
 
     <div class="gallery" id="gallery">
-        <!-- Spinner จะแสดงตรงนี้ก่อนข้อมูลจะมา -->
         <div class="loading-container">
             <div class="spinner"></div>
             <div class="loading-text">กำลังเชื่อมต่อข้อมูล...</div>
@@ -229,20 +274,97 @@
 
 <script>
     // ==========================================
-    // 🔴 ใส่ URL ของคุณที่นี่ 🔴
+    // 🔴 แก้ไขการตั้งค่าตรงนี้ 🔴
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGr-CyUQl0sl4pv23X5hhspRmvUi-ftiGo5AgLPT3Qf8ULUXtgckpU_usxXengS2kq/exec"; 
+    const CLIENT_ID = "1435981351290409103"; 
     // ==========================================
+    
+    const REDIRECT_URI = window.location.href.split('?')[0]; 
 
-    let USER_ID = localStorage.getItem("vote_user_id");
-    if (!USER_ID) {
-        USER_ID = 'user_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem("vote_user_id", USER_ID);
-    }
-
+    // ดึงข้อมูล Session
+    let sessionKey = localStorage.getItem("vote_session_key");
+    let userProfile = JSON.parse(localStorage.getItem("vote_user_profile") || "null");
     let isVotingOpen = false;
 
+    // --------------------------------------------
+    // ฟังก์ชันจัดการ Login Discord (เพิ่มเข้ามา)
+    // --------------------------------------------
+    async function checkLogin() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+
+        // ถ้ามี Code กลับมาจาก Discord (กำลัง Login)
+        if (code) {
+            document.getElementById("userBar").innerHTML = '<div class="user-info"><i class="fa-solid fa-circle-notch fa-spin"></i> กำลังยืนยันตัวตน...</div>';
+            try {
+                // ส่ง Code ไปแลก Token ที่ Google Apps Script
+                const loginRes = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    // ใช้ mode: 'cors' ถ้า Google Script ตั้งค่าถูกต้อง (Deploy as Web App -> Access: Anyone)
+                    body: JSON.stringify({ action: "login", code: code })
+                });
+                const loginData = await loginRes.json();
+
+                if (loginData.status === "success") {
+                    sessionKey = loginData.session_key;
+                    userProfile = loginData.user;
+                    localStorage.setItem("vote_session_key", sessionKey);
+                    localStorage.setItem("vote_user_profile", JSON.stringify(userProfile));
+                    
+                    // ล้าง URL ให้สวยงาม (เอา ?code=... ออก)
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } else {
+                    alert("Login Failed: " + loginData.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("เกิดข้อผิดพลาดในการ Login (ตรวจสอบ Console)");
+            }
+        }
+        renderUserBar();
+    }
+
+    function renderUserBar() {
+        const bar = document.getElementById("userBar");
+        if (userProfile) {
+            const avatarUrl = userProfile.avatar 
+                ? `https://cdn.discordapp.com/avatars/${userProfile.id}/${userProfile.avatar}.png`
+                : `https://cdn.discordapp.com/embed/avatars/0.png`;
+                
+            bar.innerHTML = `
+                <div class="user-info">
+                    <img src="${avatarUrl}" class="user-avatar">
+                    <span class="user-name">${userProfile.username}</span>
+                    <button onclick="logout()" style="margin-left:8px; background:none; border:none; cursor:pointer; color:#ff5555;" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            `;
+        } else {
+            const scope = "identify";
+            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
+            
+            bar.innerHTML = `
+                <a href="${authUrl}" class="login-btn">
+                    <i class="fa-brands fa-discord"></i> Login with Discord
+                </a>
+            `;
+        }
+    }
+
+    function logout() {
+        if(confirm("ต้องการออกจากระบบหรือไม่?")) {
+            localStorage.removeItem("vote_session_key");
+            localStorage.removeItem("vote_user_profile");
+            location.reload();
+        }
+    }
+
+    // --------------------------------------------
+    // ฟังก์ชันโหลดข้อมูล (ของเดิม + Error Handling)
+    // --------------------------------------------
     async function loadData() {
-        if (SCRIPT_URL.includes("วาง_WEB_APP_URL")) {
+        if (SCRIPT_URL.includes("วาง_URL")) {
             document.getElementById("gallery").innerHTML = "<p style='color:red; font-size:1.2em; margin-top:50px;'><i class='fa-solid fa-triangle-exclamation'></i> กรุณาใส่ URL Google Script ในโค้ดก่อนครับ</p>";
             return;
         }
@@ -251,15 +373,13 @@
             const response = await fetch(SCRIPT_URL);
             const data = await response.json();
             
-            if (data.status === "error") {
-                throw new Error(data.message);
-            }
+            if (data.status === "error") throw new Error(data.message);
 
-            const serverStatus = data.votingStatus; // "OPEN", "CLOSED", "WAITING"
+            const serverStatus = data.votingStatus; 
             handleTimer(data.endTime, serverStatus);
             
             const gallery = document.getElementById("gallery");
-            gallery.innerHTML = ""; // ลบ Loader ออกเมื่อโหลดเสร็จ
+            gallery.innerHTML = ""; 
 
             if (data.entries.length === 0) {
                 gallery.innerHTML = "<p class='loading-text' style='margin-top:50px;'><i class='fa-regular fa-folder-open'></i> ไม่พบข้อมูลการโหวต</p>";
@@ -271,7 +391,6 @@
                 score: data.votes[item.id] || 0
             }));
 
-            // Logic การเรียงลำดับ
             if (serverStatus === "CLOSED") {
                 items.sort((a, b) => b.score - a.score);
             } else {
@@ -281,7 +400,7 @@
             items.forEach((item, index) => {
                 const card = document.createElement("div");
                 card.className = "card";
-                card.style.animationDelay = `${index * 0.05}s`; // Stagger animation
+                card.style.animationDelay = `${index * 0.05}s`; 
                 
                 let rankBadge = "";
                 let btnText = '<i class="fa-regular fa-heart"></i> โหวต';
@@ -291,16 +410,9 @@
                 if (serverStatus === "CLOSED") {
                     btnText = "จบการโหวต";
                     btnDisabled = true;
-                    if (index === 0) { 
-                        card.classList.add("winner-1"); 
-                        rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; 
-                    } else if (index === 1) { 
-                        card.classList.add("winner-2"); 
-                        rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; 
-                    } else if (index === 2) { 
-                        card.classList.add("winner-3"); 
-                        rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; 
-                    }
+                    if (index === 0) { card.classList.add("winner-1"); rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; }
+                    else if (index === 1) { card.classList.add("winner-2"); rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; }
+                    else if (index === 2) { card.classList.add("winner-3"); rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; }
                 } else if (serverStatus === "WAITING") {
                     btnText = '<i class="fa-solid fa-lock"></i> รอเปิดโหวต';
                     btnClass = "waiting";
@@ -373,18 +485,25 @@
         btns.forEach(b => b.disabled = true);
     }
 
+    // ฟังก์ชันโหวต (แก้ไขให้เช็ค Login)
     function vote(itemId) {
         if (!isVotingOpen) return;
+        
+        // ✅ เพิ่มการเช็ค Login
+        if (!sessionKey) {
+            alert("กรุณา Login ด้วย Discord ก่อนโหวตครับ");
+            return;
+        }
+
         const btn = document.getElementById(`btn-${itemId}`);
         const originalText = btn.innerHTML;
-        
-        // Animation หมุนๆ ที่ปุ่ม
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังส่ง...';
 
+        // ✅ เปลี่ยน payload ให้ส่ง session_key
         const payload = JSON.stringify({
             action: "vote",
-            user_id: USER_ID,
+            session_key: sessionKey, 
             voted_for_id: itemId
         });
 
@@ -394,7 +513,6 @@
             headers: { 'Content-Type': 'text/plain' },
             body: payload
         }).then(() => {
-            // หน่วงเวลาเล็กน้อยเพื่อให้เห็น Animation
             setTimeout(() => {
                 alert("บันทึกคะแนนโหวตแล้ว! ขอบคุณครับ");
                 location.reload(); 
@@ -414,7 +532,8 @@
         document.getElementById("modal").style.display = "none";
     }
 
-    // เริ่มโหลดข้อมูล
+    // เริ่มทำงาน
+    checkLogin();
     loadData();
 </script>
 
