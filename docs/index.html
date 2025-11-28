@@ -223,7 +223,7 @@
             height: 100%; 
             background: rgba(0,0,0,0.92); 
             backdrop-filter: blur(5px);
-            overflow: auto; 
+            overflow-y: auto; /* ให้ scroll ได้ */
         }
         
         .modal-container {
@@ -239,24 +239,98 @@
 
         .modal-content { 
             max-width: 90vw; 
-            max-height: 75vh; 
+            max-height: 70vh; /* ลดความสูงเพื่อให้มีที่เหลือสำหรับ comment */
             border-radius: 8px; 
             box-shadow: 0 0 50px rgba(0,0,0,0.5); 
             animation: zoomIn 0.3s ease; 
             object-fit: contain;
         }
 
-        .modal-caption {
+        /* --- Comment Section Styles --- */
+        .modal-details {
             background: white;
-            padding: 15px 25px;
+            width: 100%;
+            max-width: 800px;
             border-radius: 15px;
-            margin-top: 20px;
-            text-align: center;
-            min-width: 280px;
-            max-width: 90%;
+            margin-top: 15px;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: left;
             animation: slideUp 0.3s ease;
         }
-        .modal-caption h3 { margin: 0 0 10px 0; color: #333; }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-header h3 { margin: 0; color: #333; }
+
+        .comments-section {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding-right: 5px;
+        }
+
+        .comment-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #f9f9f9;
+            padding-bottom: 10px;
+        }
+        
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .comment-content { flex-grow: 1; }
+        
+        .comment-user {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 0.9em;
+            margin-bottom: 2px;
+        }
+        
+        .comment-text { color: #555; font-size: 0.95em; word-break: break-word; }
+        .comment-time { font-size: 0.75em; color: #aaa; margin-top: 3px; }
+
+        .comment-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        
+        .comment-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Kanit', sans-serif;
+        }
+        
+        .send-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .send-btn:hover { background: var(--primary-hover); }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
 
         /* Navigation Buttons */
         .prev, .next {
@@ -284,7 +358,7 @@
             .prev, .next { font-size: 30px; padding: 10px; background: rgba(0,0,0,0.3); }
             .prev { left: 10px; } 
             .next { right: 10px; }
-            .modal-content { max-height: 65vh; }
+            .modal-content { max-height: 50vh; }
         }
 
         .close { 
@@ -388,7 +462,7 @@
         </div>
     </div>
 
-    <!-- Image Preview Modal (Updated) -->
+    <!-- Image Preview Modal (Updated with Comments) -->
     <div id="modal" class="modal">
         <span class="close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></span>
         
@@ -398,9 +472,27 @@
 
         <div class="modal-container">
             <img class="modal-content" id="img01" onerror="this.src='https://placehold.co/600x400?text=Image+Not+Found'; this.style.objectFit='contain';">
-            <div class="modal-caption">
-                <h3 id="modal-author"><i class="fa-solid fa-user-pen"></i> <span>Author Name</span></h3>
-                <button id="modal-vote-btn" class="vote-btn" style="width: 200px;">โหวตผลงานนี้</button>
+            
+            <div class="modal-details">
+                <div class="modal-header">
+                    <h3 id="modal-author"><i class="fa-solid fa-user-pen"></i> <span>Author Name</span></h3>
+                    <button id="modal-vote-btn" class="vote-btn" style="width: 150px; padding: 8px;">โหวต</button>
+                </div>
+
+                <!-- Comments Section -->
+                <div class="comments-section" id="comments-list">
+                    <!-- Comments will be loaded here -->
+                    <div style="text-align:center; color:#999;">กำลังโหลดความคิดเห็น...</div>
+                </div>
+
+                <!-- Comment Input -->
+                <div class="comment-form" id="comment-form">
+                    <input type="text" class="comment-input" id="comment-input" placeholder="แสดงความคิดเห็น..." maxlength="200">
+                    <button class="send-btn" onclick="sendComment()"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+                <div id="login-warning" style="display:none; color:red; font-size:0.9em; margin-top:10px; text-align:center;">
+                    <i class="fa-brands fa-discord"></i> กรุณา Login เพื่อแสดงความคิดเห็น
+                </div>
             </div>
         </div>
     </div>
@@ -455,6 +547,7 @@
     let userProfile = JSON.parse(localStorage.getItem("vote_user_profile") || "null");
     let isVotingOpen = false;
     let allItems = []; // เก็บข้อมูลรูปภาพทั้งหมด
+    let allComments = []; // เก็บข้อมูลคอมเมนต์ทั้งหมด
     let currentImageIndex = 0; // เก็บ Index รูปปัจจุบันที่เปิดอยู่
     let serverStatusGlobal = "WAITING"; // เก็บสถานะ Server
 
@@ -548,6 +641,9 @@
             const gallery = document.getElementById("gallery");
             gallery.innerHTML = ""; 
 
+            // เก็บข้อมูลคอมเมนต์ (ถ้ามี)
+            allComments = data.comments || [];
+
             if (data.entries.length === 0) {
                 gallery.innerHTML = "<p class='loading-text' style='margin-top:50px;'><i class='fa-regular fa-folder-open'></i> ไม่พบข้อมูลการโหวต</p>";
                 return;
@@ -578,9 +674,20 @@
                 if (serverStatusGlobal === "CLOSED") {
                     btnText = "จบการโหวต";
                     btnDisabled = true;
-                    if (index === 0) { card.classList.add("winner-1"); rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; }
-                    else if (index === 1) { card.classList.add("winner-2"); rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; }
-                    else if (index === 2) { card.classList.add("winner-3"); rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; }
+                    // 🔥 เพิ่มการแสดงเลข Rank เมื่อปิดโหวต
+                    if (index === 0) { 
+                        card.classList.add("winner-1"); 
+                        rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; 
+                    } else if (index === 1) { 
+                        card.classList.add("winner-2"); 
+                        rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; 
+                    } else if (index === 2) { 
+                        card.classList.add("winner-3"); 
+                        rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; 
+                    } else {
+                        // แสดงเลขลำดับสำหรับคนที่เหลือ
+                        rankBadge = `<div class='rank-badge' style='color:#555; border:2px solid #eee; font-size:1.2em; font-weight:bold;'>${index + 1}</div>`;
+                    }
                 } else if (serverStatusGlobal === "WAITING") {
                     btnText = '<i class="fa-solid fa-lock"></i> รอเปิดโหวต';
                     btnClass = "waiting";
@@ -698,7 +805,7 @@
             }
             if(btnModal) {
                 btnModal.disabled = false;
-                btnModal.innerHTML = "โหวตผลงานนี้";
+                btnModal.innerHTML = "โหวต";
             }
         });
     }
@@ -726,7 +833,6 @@
         const voteBtn = document.getElementById("modal-vote-btn");
 
         img.src = item.url;
-        // เพิ่ม onerror เพื่อรีเซ็ต event handler ถ้าโหลดผ่าน
         img.onerror = function() {
             this.src = 'https://placehold.co/600x400?text=Image+Not+Found';
             this.style.objectFit = 'contain';
@@ -750,6 +856,103 @@
             voteBtn.disabled = !isVotingOpen;
             voteBtn.classList.remove("waiting");
         }
+
+        // ✅ อัปเดตคอมเมนต์
+        renderComments(item.id);
+    }
+
+    function renderComments(imageId) {
+        const list = document.getElementById("comments-list");
+        const inputDiv = document.getElementById("comment-form");
+        const loginWarn = document.getElementById("login-warning");
+        
+        list.innerHTML = "";
+        
+        // กรองคอมเมนต์เฉพาะรูปนี้ (ตัด ' ออกจาก ID ก่อนเทียบ)
+        const relevantComments = allComments.filter(c => c.imageId.replace(/'/g, '') == String(imageId).replace(/'/g, ''));
+        
+        if (relevantComments.length === 0) {
+            list.innerHTML = "<div style='text-align:center; color:#ccc; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>";
+        } else {
+            relevantComments.forEach(c => {
+                const avatar = c.avatar 
+                    ? `https://cdn.discordapp.com/avatars/${c.userId.replace(/'/g, '')}/${c.avatar}.png`
+                    : `https://cdn.discordapp.com/embed/avatars/0.png`;
+                
+                const time = new Date(c.timestamp).toLocaleString('th-TH', { 
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
+                });
+
+                const html = `
+                    <div class="comment-item">
+                        <img src="${avatar}" class="comment-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                        <div class="comment-content">
+                            <div class="comment-user">${c.username}</div>
+                            <div class="comment-text">${c.text}</div>
+                            <div class="comment-time">${time}</div>
+                        </div>
+                    </div>
+                `;
+                list.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // เช็คสิทธิ์การคอมเมนต์
+        if (sessionKey) {
+            inputDiv.style.display = "flex";
+            loginWarn.style.display = "none";
+        } else {
+            inputDiv.style.display = "none";
+            loginWarn.style.display = "block";
+        }
+    }
+
+    function sendComment() {
+        if (!sessionKey) return;
+        const input = document.getElementById("comment-input");
+        const text = input.value.trim();
+        const currentItem = allItems[currentImageIndex];
+        
+        if (!text) return;
+        if (!currentItem) return;
+
+        const btn = document.querySelector(".send-btn");
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        const payload = JSON.stringify({
+            action: "add_comment",
+            session_key: sessionKey,
+            image_id: currentItem.id,
+            comment: text
+        });
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: payload
+        }).then(() => {
+            // จำลองการเพิ่มคอมเมนต์ลงในหน้าจอทันที (ไม่ต้องรอ Reload)
+            const newComment = {
+                timestamp: new Date().toISOString(),
+                imageId: currentItem.id,
+                userId: userProfile.id,
+                username: userProfile.username,
+                avatar: userProfile.avatar,
+                text: text
+            };
+            allComments.push(newComment);
+            renderComments(currentItem.id);
+            input.value = "";
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }).catch(err => {
+            alert("ส่งคอมเมนต์ไม่สำเร็จ");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
     }
 
     function changeImage(step) {
