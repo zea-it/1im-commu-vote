@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1IM Community Vote System</title>
     
-    <!-- Favicon -->
     <link rel="icon" href="/1im-commu-vote/icon.ico" type="image/x-icon">
 
-    <!-- Fonts: Kanit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     
-    <!-- Icons: Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -38,14 +35,14 @@
             line-height: 1.6;
         }
 
-        /* --- เพิ่ม CSS สำหรับ User Bar (Discord Login) --- */
+        /* --- User Bar (Discord Login) --- */
         .user-bar {
             display: flex;
             justify-content: flex-end;
             align-items: center;
             margin-bottom: 10px;
             padding: 0 10px;
-            position: absolute; /* ลอยมุมขวาบน */
+            position: absolute;
             top: 20px;
             right: 20px;
             z-index: 100;
@@ -82,7 +79,6 @@
             box-shadow: 0 4px 10px rgba(88, 101, 242, 0.3);
         }
         .login-btn:hover { background: #4752c4; transform: translateY(-2px); }
-        /* -------------------------------------------------- */
 
         h1 {
             color: var(--primary-color);
@@ -91,7 +87,7 @@
             margin-bottom: 10px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
-            margin-top: 30px; /* เพิ่มระยะห่างข้างบนเผื่อติดปุ่ม Login */
+            margin-top: 30px; 
         }
         
         h1 i { margin-right: 10px; }
@@ -213,11 +209,55 @@
         .rank-badge.silver { color: #C0C0C0; border: 2px solid #C0C0C0; }
         .rank-badge.bronze { color: #CD7F32; border: 2px solid #CD7F32; }
 
-        /* Modal */
+        /* Modal (ใช้ร่วมกันพื้นฐาน) */
         .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
         .modal-content { margin: auto; display: block; max-width: 90%; max-height: 90vh; margin-top: 5vh; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); animation: zoomIn 0.3s ease; }
         .close { position: absolute; top: 20px; right: 40px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; transition: color 0.2s; z-index: 1000; }
         .close:hover { color: var(--secondary-color); }
+
+        /* --- Privacy / Info Modal Styling (เพิ่มใหม่) --- */
+        .info-toggle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: #2b2d42;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 900;
+        }
+        .info-toggle:hover { background: var(--secondary-color); transform: rotate(180deg) scale(1.1); }
+        
+        .privacy-box {
+            background: white;
+            width: 90%;
+            max-width: 600px;
+            margin: 10vh auto;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: left;
+            position: relative;
+            animation: zoomIn 0.3s ease;
+        }
+        .privacy-box h2 { color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        .privacy-box h3 { font-size: 1.1em; color: #444; margin-top: 20px; margin-bottom: 5px; }
+        .privacy-box p { font-size: 0.95em; color: #666; margin-bottom: 15px; }
+        .privacy-box .close-btn-inner {
+            background: var(--primary-color); color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; cursor: pointer; float: right; margin-top: 10px;
+        }
+        .privacy-box .close-btn-inner:hover { background: var(--primary-hover); }
+        .contact-link { color: var(--secondary-color); font-weight: bold; text-decoration: none; }
+        .contact-link:hover { text-decoration: underline; }
+        /* ----------------------------------------------- */
 
         @keyframes zoomIn {
             from {transform:scale(0.8); opacity:0} 
@@ -254,7 +294,6 @@
 </head>
 <body>
 
-    <!-- ส่วนแสดงปุ่ม Login Discord (เพิ่มเข้ามา) -->
     <div class="user-bar" id="userBar"></div>
 
     <h1><i class="fa-solid fa-square-poll-vertical"></i> 1IM Community Vote System</h1>
@@ -272,7 +311,41 @@
         <img class="modal-content" id="img01">
     </div>
 
-<script>
+    <div class="info-toggle" onclick="openPrivacyModal()">
+        <i class="fa-solid fa-info"></i>
+    </div>
+
+    <div id="privacyModal" class="modal">
+        <div class="privacy-box">
+            <h2><i class="fa-solid fa-shield-halved"></i> ข้อกำหนดและเงื่อนไข</h2>
+            
+            <h3><i class="fa-brands fa-discord" style="color:#5865F2;"></i> การเข้าสู่ระบบด้วย Discord</h3>
+            <p>
+                ระบบการเข้าสู่ระบบด้วย Discord มีวัตถุประสงค์เพื่อ <strong>"การยืนยันตัวตนเท่านั้น"</strong> เพื่อป้องกันการโหวตซ้ำและสแปม 
+                กระบวนการ Login ทั้งหมดเกิดขึ้นบนเว็บไซต์ของ Discord โดยตรง ทางเราเพียงแค่รับข้อมูล User ID 
+                เพื่อยืนยันสิทธิ์ในการโหวต ไม่มีการเก็บรหัสผ่านหรือเข้าถึงข้อมูลส่วนตัวเชิงลึกอื่น ๆ ของท่าน
+            </p>
+
+            <h3><i class="fa-solid fa-copyright" style="color:#ffae00;"></i> ลิขสิทธิ์ผลงาน</h3>
+            <p>
+                ภาพผลงานที่ปรากฏบนเว็บไซต์นี้ เป็นลิขสิทธิ์ของทางเว็บไซต์และศิลปินเจ้าของผลงานโดยถูกต้อง 
+                ห้ามมิให้ผู้ใดทำการคัดลอก ดัดแปลง หรือนำไปใช้แอบอ้างโดยไม่ได้รับอนุญาต 
+                ทางเราและศิลปินขอสงวนสิทธิ์ในผลงานของตนเอง
+            </p>
+
+            <h3><i class="fa-solid fa-bug" style="color:#f72585;"></i> แจ้งปัญหาการใช้งาน</h3>
+            <p>
+                หากพบปัญหาในการใช้งานเว็บไซต์ หรือพบเห็นความผิดปกติ สามารถติดต่อผู้ดูแลระบบได้ที่ zc. <br>
+                <a href="https://x.com/Izc_it" target="_blank" class="contact-link">
+                    <i class="fa-brands fa-x-twitter"></i> https://x.com/Izc_it
+                </a>
+            </p>
+
+            <button class="close-btn-inner" onclick="closePrivacyModal()">รับทราบ</button>
+            <div style="clear:both;"></div>
+        </div>
+    </div>
+    <script>
     // ==========================================
     // 🔴 แก้ไขการตั้งค่าตรงนี้ 🔴
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGr-CyUQl0sl4pv23X5hhspRmvUi-ftiGo5AgLPT3Qf8ULUXtgckpU_usxXengS2kq/exec"; 
@@ -287,20 +360,17 @@
     let isVotingOpen = false;
 
     // --------------------------------------------
-    // ฟังก์ชันจัดการ Login Discord (เพิ่มเข้ามา)
+    // ฟังก์ชันจัดการ Login Discord
     // --------------------------------------------
     async function checkLogin() {
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
 
-        // ถ้ามี Code กลับมาจาก Discord (กำลัง Login)
         if (code) {
             document.getElementById("userBar").innerHTML = '<div class="user-info"><i class="fa-solid fa-circle-notch fa-spin"></i> กำลังยืนยันตัวตน...</div>';
             try {
-                // ส่ง Code ไปแลก Token ที่ Google Apps Script
                 const loginRes = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    // ใช้ mode: 'cors' ถ้า Google Script ตั้งค่าถูกต้อง (Deploy as Web App -> Access: Anyone)
                     body: JSON.stringify({ action: "login", code: code })
                 });
                 const loginData = await loginRes.json();
@@ -310,8 +380,6 @@
                     userProfile = loginData.user;
                     localStorage.setItem("vote_session_key", sessionKey);
                     localStorage.setItem("vote_user_profile", JSON.stringify(userProfile));
-                    
-                    // ล้าง URL ให้สวยงาม (เอา ?code=... ออก)
                     window.history.replaceState({}, document.title, window.location.pathname);
                 } else {
                     alert("Login Failed: " + loginData.message);
@@ -361,7 +429,7 @@
     }
 
     // --------------------------------------------
-    // ฟังก์ชันโหลดข้อมูล (ของเดิม + Error Handling)
+    // ฟังก์ชันโหลดข้อมูล
     // --------------------------------------------
     async function loadData() {
         if (SCRIPT_URL.includes("วาง_URL")) {
@@ -443,14 +511,12 @@
 
     function handleTimer(endTimeStr, status) {
         const timerElem = document.getElementById("timer");
-        
         if (status === "WAITING") {
             timerElem.innerHTML = "<i class='fa-solid fa-hourglass'></i> รอ Admin เปิดโหวต...";
             timerElem.style.color = "#d4a017";
             isVotingOpen = false;
             return;
         }
-
         if (status === "CLOSED") {
             timerElem.innerHTML = "<i class='fa-solid fa-flag-checkered'></i> การโหวตสิ้นสุดลงแล้ว";
             timerElem.style.color = "#d4a017";
@@ -485,11 +551,8 @@
         btns.forEach(b => b.disabled = true);
     }
 
-    // ฟังก์ชันโหวต (แก้ไขให้เช็ค Login)
     function vote(itemId) {
         if (!isVotingOpen) return;
-        
-        // ✅ เพิ่มการเช็ค Login
         if (!sessionKey) {
             alert("กรุณา Login ด้วย Discord ก่อนโหวตครับ");
             return;
@@ -500,7 +563,6 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังส่ง...';
 
-        // ✅ เปลี่ยน payload ให้ส่ง session_key
         const payload = JSON.stringify({
             action: "vote",
             session_key: sessionKey, 
@@ -524,6 +586,7 @@
         });
     }
 
+    // Modal Image
     function openModal(src) {
         document.getElementById("modal").style.display = "block";
         document.getElementById("img01").src = src;
@@ -532,7 +595,22 @@
         document.getElementById("modal").style.display = "none";
     }
 
-    // เริ่มทำงาน
+    // Modal Privacy (เพิ่มใหม่)
+    function openPrivacyModal() {
+        document.getElementById("privacyModal").style.display = "block";
+    }
+    function closePrivacyModal() {
+        document.getElementById("privacyModal").style.display = "none";
+    }
+
+    // ปิด Modal เมื่อคลิกข้างนอก
+    window.onclick = function(event) {
+        const modal1 = document.getElementById("modal");
+        const modal2 = document.getElementById("privacyModal");
+        if (event.target == modal1) { modal1.style.display = "none"; }
+        if (event.target == modal2) { modal2.style.display = "none"; }
+    }
+
     checkLogin();
     loadData();
 </script>
