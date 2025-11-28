@@ -140,8 +140,6 @@
         .modal-content:active { cursor: grabbing; }
 
         /* --- Tools & Bar (Desktop) --- */
-        
-        /* เครื่องมือซูม (Desktop: ขวา, Mobile: ล่าง) */
         .image-tools {
             position: absolute; right: 100px; top: 50%; transform: translateY(-50%);
             display: flex; flex-direction: column; gap: 15px; 
@@ -179,24 +177,17 @@
             display: flex; align-items: center; justify-content: center; border: 2px solid white;
         }
 
-        /* --- Mobile Adjustments (แก้ไขเรื่องปุ่มทับกัน) --- */
+        /* --- Mobile Adjustments --- */
         @media (max-width: 768px) {
             .image-tools {
-                right: auto; top: auto; 
-                /* 🔥 แก้ไข: ขยับขึ้นไปอีกนิดเพื่อหลบปุ่มลูกศร */
-                bottom: 110px; 
+                right: auto; top: auto; bottom: 110px; 
                 left: 50%; transform: translateX(-50%);
                 flex-direction: row; padding: 8px 16px; border-radius: 30px;
                 background: rgba(0,0,0,0.6);
-                gap: 20px; /* เพิ่มระยะห่างระหว่างปุ่มซูม */
+                gap: 20px; 
             }
             .bottom-bar { bottom: 20px; width: 90%; box-sizing: border-box; }
-            
-            /* 🔥 แก้ไข: ปรับปุ่มลูกศรให้ไม่โดนบัง */
-            .prev, .next { 
-                z-index: 1020; /* ให้ z-index สูงกว่าเครื่องมือ */
-                background: rgba(0,0,0,0.4); /* ทำให้เข้มขึ้นนิดนึงเพื่อให้เห็นชัด */
-            }
+            .prev, .next { z-index: 1020; background: rgba(0,0,0,0.4); }
         }
 
         /* --- Comment Sheet (Slide Up) --- */
@@ -223,6 +214,7 @@
         .comment-form { display: flex; gap: 10px; }
         .comment-input { flex-grow: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
         .send-btn { background: var(--primary-color); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
 
         /* Navigation Arrows */
         .prev, .next {
@@ -263,7 +255,7 @@
         <div class="loading-container"><div class="spinner"></div><div class="loading-text">กำลังเชื่อมต่อ...</div></div>
     </div>
 
-    <!-- Image Viewer Modal -->
+    <!-- Image Viewer Modal (ดีไซน์เดิมที่คุณชอบ) -->
     <div id="modal" class="modal">
         <span class="close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></span>
         <a class="prev" onclick="changeImage(-1)">&#10094;</a>
@@ -283,7 +275,7 @@
                 <button class="tool-btn" onclick="toggleFullScreen()" title="Full Screen"><i class="fa-solid fa-expand"></i></button>
             </div>
             
-            <!-- 3. แถบข้อมูลด้านล่าง (ลอยตัว สวยงาม) -->
+            <!-- 3. แถบข้อมูลด้านล่าง (ลอยตัว สวยงาม + ปุ่มเปิดกล่องข้อความ) -->
             <div class="bottom-bar">
                 <div class="bottom-info">
                     <h3 id="modal-author"><i class="fa-solid fa-user-pen"></i> <span>Author</span></h3>
@@ -301,7 +293,7 @@
         </div>
     </div>
 
-    <!-- Comment Sheet (เหมือนกันทั้ง Desktop/Mobile) -->
+    <!-- Comment Sheet (กล่องข้อความเลื่อนขึ้น) -->
     <div class="comment-sheet" id="commentSheet">
         <div class="sheet-header">
             <h3><i class="fa-regular fa-comments"></i> ความคิดเห็น</h3>
@@ -313,7 +305,7 @@
         <div class="sheet-footer">
             <div id="comment-input-area" class="comment-form">
                 <input type="text" class="comment-input" id="comment-input" placeholder="แสดงความคิดเห็น..." maxlength="200">
-                <button class="send-btn" onclick="sendComment()"><i class="fa-solid fa-paper-plane"></i></button>
+                <button class="send-btn" id="send-comment-btn" onclick="sendComment()"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
             <div id="login-warning" style="display:none; color:red; font-size:0.9em; text-align:center; padding:10px;">
                 <i class="fa-brands fa-discord"></i> กรุณา Login เพื่อแสดงความคิดเห็น
@@ -321,7 +313,7 @@
         </div>
     </div>
 
-    <!-- Privacy Info Button & Modal (Added Full Content) -->
+    <!-- Privacy Info Button & Modal -->
     <div class="info-toggle" onclick="openPrivacyModal()">
         <i class="fa-solid fa-info"></i>
     </div>
@@ -329,7 +321,7 @@
     <div id="privacyModal" class="modal">
         <div class="privacy-box">
             <h2><i class="fa-solid fa-shield-halved"></i> ข้อกำหนดและเงื่อนไข</h2>
-            
+            <!-- เนื้อหาเหมือนเดิม -->
             <h3><i class="fa-brands fa-discord" style="color:#5865F2;"></i> การเข้าสู่ระบบด้วย Discord</h3>
             <p>
                 ระบบการเข้าสู่ระบบด้วย Discord มีวัตถุประสงค์เพื่อ <strong>"การยืนยันตัวตนเท่านั้น"</strong> เพื่อป้องกันการโหวตซ้ำและสแปม 
@@ -369,6 +361,7 @@
     let sessionKey = localStorage.getItem("vote_session_key");
     let userProfile = JSON.parse(localStorage.getItem("vote_user_profile") || "null");
     let isVotingOpen = false;
+    let isSubmitting = false; // 🔥 ตัวแปรป้องกันการกดรัว
     let allItems = []; let allComments = []; 
     let currentImageIndex = 0; let serverStatusGlobal = "WAITING"; 
 
@@ -493,18 +486,59 @@
         const timerElem = document.getElementById("timer");
         if (status === "WAITING") { timerElem.innerHTML = "รอ Admin เปิดโหวต..."; timerElem.style.color = "#d4a017"; isVotingOpen = false; return; }
         if (status === "CLOSED") { timerElem.innerHTML = "การโหวตสิ้นสุดลงแล้ว"; timerElem.style.color = "#d4a017"; isVotingOpen = false; return; }
+        
+        // 🔥 แก้ไขการนับเวลา (Robust Time Parsing)
+        const endTime = new Date(endTimeStr).getTime();
+        if (isNaN(endTime)) { timerElem.innerHTML = "ไม่พบเวลาปิดโหวต"; isVotingOpen = true; return; }
+
         const interval = setInterval(() => {
-            const distance = new Date(endTimeStr).getTime() - new Date().getTime();
-            if (distance < 0) { clearInterval(interval); timerElem.innerHTML = "หมดเวลา"; isVotingOpen = false; setTimeout(() => location.reload(), 2000); }
-            else { isVotingOpen = true; const h = Math.floor(distance/3600000); const m = Math.floor((distance%3600000)/60000); timerElem.innerHTML = `ปิดโหวตใน: ${h}ชม. ${m}น.`; }
+            const now = new Date().getTime();
+            const distance = endTime - now;
+            
+            if (distance < 0) { 
+                clearInterval(interval); 
+                timerElem.innerHTML = "หมดเวลา"; 
+                isVotingOpen = false; 
+                setTimeout(() => location.reload(), 2000); 
+            } else { 
+                isVotingOpen = true; 
+                const h = Math.floor(distance/3600000); 
+                const m = Math.floor((distance%3600000)/60000); 
+                const s = Math.floor((distance%60000)/1000);
+                timerElem.innerHTML = `ปิดโหวตใน: ${h}ชม. ${m}น. ${s}วิ.`; 
+            }
         }, 1000);
     }
 
     function vote(itemId) {
         if (!isVotingOpen) return;
         if (!sessionKey) { alert("กรุณา Login"); return; }
+        if (isSubmitting) return; // 🔥 ป้องกันกดซ้ำ
+
+        const btnGallery = document.getElementById(`btn-${itemId}`);
+        const btnModal = document.getElementById(`modal-vote-btn`);
+        const originalTextGallery = btnGallery ? btnGallery.innerHTML : "";
+        const originalTextModal = btnModal ? btnModal.innerHTML : "";
+
+        // 🔥 ล็อกปุ่ม
+        isSubmitting = true;
+        if(btnGallery) { btnGallery.disabled = true; btnGallery.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
+        if(btnModal) { btnModal.disabled = true; btnModal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
+
         fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type':'text/plain'}, body: JSON.stringify({ action: "vote", session_key: sessionKey, voted_for_id: itemId }) })
-        .then(() => { setTimeout(() => { alert("บันทึกแล้ว!"); location.reload(); }, 500); });
+        .then(() => { 
+            setTimeout(() => { 
+                alert("บันทึกแล้ว!"); 
+                location.reload(); 
+            }, 1000); 
+        })
+        .catch(() => {
+            alert("เกิดข้อผิดพลาด");
+            isSubmitting = false;
+            // คืนค่าปุ่ม
+            if(btnGallery) { btnGallery.disabled = false; btnGallery.innerHTML = originalTextGallery; }
+            if(btnModal) { btnModal.disabled = false; btnModal.innerHTML = originalTextModal; }
+        });
     }
 
     function openModal(index) {
@@ -570,16 +604,41 @@
 
     function sendComment() {
         if (!sessionKey) return;
+        if (isSubmitting) return; // 🔥 ป้องกันกดซ้ำ
+
         const input = document.getElementById("comment-input");
         const text = input.value.trim();
         const item = allItems[currentImageIndex];
         if (!text || !item) return;
 
+        // 🔥 ล็อกปุ่มส่ง
+        isSubmitting = true;
+        const btn = document.getElementById("send-comment-btn");
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        input.disabled = true;
+
         const payload = JSON.stringify({ action: "add_comment", session_key: sessionKey, image_id: item.id, comment: text });
         fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type':'text/plain'}, body: payload })
         .then(() => {
             allComments.push({ timestamp: new Date().toISOString(), imageId: item.id, userId: userProfile.id, username: userProfile.username, avatar: userProfile.avatar, text: text });
-            renderComments(item.id); input.value = "";
+            renderComments(item.id); 
+            input.value = "";
+            
+            // 🔥 ปลดล็อก
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            input.disabled = false;
+            isSubmitting = false;
+            input.focus();
+        })
+        .catch(() => {
+            alert("ส่งไม่สำเร็จ");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            input.disabled = false;
+            isSubmitting = false;
         });
     }
 
