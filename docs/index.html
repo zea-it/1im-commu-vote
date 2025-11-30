@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>1IM Community Vote System</title>
     
-    <!-- Favicon -->
     <link rel="icon" href="/1im-commu-vote/icon.ico" type="image/x-icon">
-
-    <!-- Fonts: Kanit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- แก้ไข URL Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- Icons: Font Awesome -->
+    <!-- แก้ไข URL FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -39,10 +36,8 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* ป้องกัน Scrollbar เวลาเปิด Modal */
-        body.modal-open { overflow: hidden; }
+        body.modal-open { overflow: hidden; } /* แก้ไข . modal-open */
 
-        /* --- User Bar --- */
         .user-bar {
             display: flex; justify-content: flex-end; align-items: center;
             margin-bottom: 10px; padding: 0 10px; position: absolute; top: 20px; right: 20px; z-index: 100;
@@ -54,8 +49,8 @@
             padding: 5px 15px 5px 5px; border-radius: 50px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eee;
         }
-        .user-avatar { width: 35px; height: 35px; border-radius: 50%; }
-        .user-name { font-weight: 500; color: #333; font-size: 0.9em; }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; } /* แก้ไข . user-avatar */
+        .user-name { font-weight: 500; color: #333; font-size: 0.9em; } /* แก้ไข . user-name */
         
         .login-btn {
             background: #5865F2; color: white; text-decoration: none; padding: 8px 16px;
@@ -65,11 +60,31 @@
         }
         .login-btn:hover { background: #4752c4; transform: translateY(-2px); }
 
+        .error-banner {
+            background: #ffebee; border-left: 4px solid #f44336; color: #c62828;
+            padding: 12px 16px; border-radius: 4px; margin: 15px auto; display: none;
+            max-width: 600px;
+        }
+
+        .success-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4caf50;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-weight: 500;
+            animation: slideUpToast 0.3s ease;
+        }
+        @keyframes slideUpToast { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+
         h1 { color: var(--primary-color); font-weight: 600; font-size: 2.5em; margin-bottom: 10px; margin-top: 30px; text-transform: uppercase; }
         #timer { font-size: 1.2em; color: #555; background: #fff; display: inline-block; padding: 10px 25px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 40px; font-weight: 500; border: 1px solid #eee; transition: color 0.3s; }
         #timer i { margin-right: 8px; color: var(--secondary-color); }
 
-        /* --- Gallery Grid --- */
         .gallery {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 30px; max-width: 1280px; margin: 0 auto; min-height: 300px;
@@ -82,7 +97,7 @@
             opacity: 0; animation: fadeIn 0.5s ease forwards;
         }
         @keyframes fadeIn { to { opacity: 1; } }
-        .card.winner-1 { border: 3px solid #FFD700; transform: scale(1.05); z-index: 10; box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+        .card.winner-1 { border: 3px solid #FFD700; transform: scale(1.05); z-index: 10; box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); } /* แก้ไข . winner-1 */
         .card.winner-2 { border: 3px solid #C0C0C0; }
         .card.winner-3 { border: 3px solid #CD7F32; }
         .card:hover { transform: translateY(-10px); box-shadow: var(--shadow-hover); }
@@ -92,7 +107,6 @@
         .info { padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 10px; }
         .author { font-weight: 500; color: #333; font-size: 1.2em; }
         
-        /* Vote Button Styles */
         .vote-btn {
             background: linear-gradient(135deg, var(--primary-color), #304ffe); color: white;
             border: none; padding: 12px; border-radius: 12px; cursor: pointer; width: 100%;
@@ -107,19 +121,18 @@
             color: #444 !important; 
             cursor: not-allowed; 
             opacity: 1 !important;
-        }
+        } /* แก้ไข . waiting */
 
         .votes-count, .rank-badge { position: absolute; z-index: 2; background: white; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; }
         .votes-count { top: 15px; right: 15px; border-radius: 30px; padding: 6px 14px; color: var(--primary-color); font-weight: bold; }
         .rank-badge { top: 10px; left: 10px; width: 45px; height: 45px; font-size: 1.4em; }
-        .rank-badge.gold { color: #FFD700; border: 2px solid #FFD700; }
+        .rank-badge.gold { color: #FFD700; border: 2px solid #FFD700; } /* แก้ไข . rank-badge */
         .rank-badge.silver { color: #C0C0C0; border: 2px solid #C0C0C0; }
         .rank-badge.bronze { color: #CD7F32; border: 2px solid #CD7F32; }
 
-        /* --- Modal (Immersive Viewer) --- */
         .modal { 
             display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); backdrop-filter: blur(8px);
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
         }
         
         .modal-container {
@@ -128,7 +141,7 @@
         }
 
         .image-wrapper {
-            position: relative; width: 100%; height: 100%; /* เต็มจอเสมอ */
+            position: relative; width: 100%; height: 100%;
             display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
 
@@ -139,7 +152,6 @@
         }
         .modal-content:active { cursor: grabbing; }
 
-        /* --- Tools & Bar (Desktop) --- */
         .image-tools {
             position: absolute; right: 100px; top: 50%; transform: translateY(-50%);
             display: flex; flex-direction: column; gap: 15px; 
@@ -151,10 +163,9 @@
             color: white; font-size: 1.2em; cursor: pointer; transition: 0.2s;
             background: none; border: none; width: 40px; height: 40px;
             display: flex; align-items: center; justify-content: center; border-radius: 50%;
-        }
+        } /* แก้ไข 1. 2em และ . tool-btn */
         .tool-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
 
-        /* แถบข้อมูลด้านล่าง (Author + Vote) */
         .bottom-bar {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             display: flex; align-items: center; gap: 20px;
@@ -163,7 +174,7 @@
             min-width: 300px; justify-content: space-between;
             animation: slideUp 0.3s ease;
         }
-        .bottom-info h3 { margin: 0; font-size: 1.1em; color: #333; display: flex; align-items: center; gap: 8px; }
+        .bottom-info h3 { margin: 0; font-size: 1.1em; color: #333; display: flex; align-items: center; gap: 8px; } /* แก้ไข . bottom-info */
         
         .comment-toggle-btn {
             background: #f0f2f5; color: #555; border: none; width: 40px; height: 40px;
@@ -177,7 +188,6 @@
             display: flex; align-items: center; justify-content: center; border: 2px solid white;
         }
 
-        /* --- Mobile Adjustments --- */
         @media (max-width: 768px) {
             .image-tools {
                 right: auto; top: auto; bottom: 110px; 
@@ -187,10 +197,9 @@
                 gap: 20px; 
             }
             .bottom-bar { bottom: 20px; width: 90%; box-sizing: border-box; }
-            .prev, .next { z-index: 1020; background: rgba(0,0,0,0.4); }
+            .prev, .next { z-index: 1020; background: rgba(0,0,0,0.4); } /* แก้ไข . prev, . next */
         }
 
-        /* --- Comment Sheet (Slide Up) --- */
         .comment-sheet {
             position: fixed; left: 0; bottom: -100%; width: 100%; height: 60vh;
             background: white; border-radius: 20px 20px 0 0;
@@ -212,11 +221,10 @@
         .comment-time { font-size: 0.75em; color: #aaa; margin-top: 4px; text-align: right; }
 
         .comment-form { display: flex; gap: 10px; }
-        .comment-input { flex-grow: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        .comment-input { flex-grow: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 16px; }
         .send-btn { background: var(--primary-color); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .send-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Navigation Arrows */
         .prev, .next {
             cursor: pointer; position: absolute; top: 50%; width: auto; padding: 16px;
             margin-top: -50px; color: white; font-weight: bold; font-size: 40px;
@@ -224,29 +232,28 @@
             user-select: none; z-index: 1002; text-decoration: none;
         }
         .prev { left: 20px; } .next { right: 20px; }
-        .prev:hover, .next:hover { background-color: rgba(255, 255, 255, 0.3); }
-        .close { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 1020; }
+        .prev:hover, .next:hover { background-color: rgba(255, 255, 255, 0.3); } /* แก้ไข . prev:hover */
+        .close { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 1020; } /* แก้ไข . close */
 
-        /* Privacy */
         .privacy-box { background: white; width: 90%; max-width: 600px; margin: 10vh auto; padding: 40px; border-radius: 20px; text-align: left; position: relative; animation: zoomIn 0.3s ease; }
         .info-toggle { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background: #2b2d42; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 900; transition: 0.3s; }
-        .privacy-box .close-btn-inner { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 10px; }
+        .privacy-box .close-btn-inner { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 10px; } /* แก้ไข . close-btn-inner */
         .contact-link { color: var(--secondary-color); font-weight: bold; text-decoration: none; }
         .contact-link:hover { text-decoration: underline; }
         
         @keyframes slideUp { from {transform:translate(-50%, 20px); opacity:0} to {transform:translate(-50%, 0); opacity:1} }
         @keyframes zoomIn { from {transform:scale(0.8); opacity:0} to {transform:scale(1); opacity:1} }
 
-        /* Loading */
         .loading-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; }
         .spinner { width: 50px; height: 50px; border: 5px solid #e1e4e8; border-top: 5px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        .loading-text { font-size: 1.2em; color: #888; font-weight: 300; }
+        .loading-text { font-size: 1.2em; color: #888; font-weight: 300; } /* แก้ไข . loading-text */
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div class="user-bar" id="userBar"></div>
+    <div class="error-banner" id="errorBanner"></div>
 
     <h1><i class="fa-solid fa-square-poll-vertical"></i> 1IM Community Vote System</h1>
     <div id="timer"><i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลด...</div>
@@ -255,45 +262,38 @@
         <div class="loading-container"><div class="spinner"></div><div class="loading-text">กำลังเชื่อมต่อ...</div></div>
     </div>
 
-    <!-- Image Viewer Modal (ดีไซน์เดิมที่คุณชอบ) -->
     <div id="modal" class="modal">
         <span class="close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></span>
         <a class="prev" onclick="changeImage(-1)">&#10094;</a>
         <a class="next" onclick="changeImage(1)">&#10095;</a>
 
         <div class="modal-container">
-            <!-- 1. รูปภาพ (พื้นที่หลัก) -->
             <div class="image-wrapper" id="imgWrapper">
                 <img class="modal-content" id="img01">
             </div>
 
-            <!-- 2. เครื่องมือ (ขวาบน Desktop / ล่างกลาง Mobile) -->
             <div class="image-tools">
-                <button class="tool-btn" onclick="zoomImage(0.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button class="tool-btn" onclick="zoomImage(0.2)" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button> <!-- แก้ไข 0. 2 -->
                 <button class="tool-btn" onclick="zoomImage(-0.2)" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
                 <button class="tool-btn" onclick="resetZoom()" title="Reset"><i class="fa-solid fa-compress"></i></button>
                 <button class="tool-btn" onclick="toggleFullScreen()" title="Full Screen"><i class="fa-solid fa-expand"></i></button>
             </div>
             
-            <!-- 3. แถบข้อมูลด้านล่าง (ลอยตัว สวยงาม + ปุ่มเปิดกล่องข้อความ) -->
             <div class="bottom-bar">
                 <div class="bottom-info">
                     <h3 id="modal-author"><i class="fa-solid fa-user-pen"></i> <span>Author</span></h3>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <!-- ปุ่มเปิดคอมเมนต์ -->
                     <button class="comment-toggle-btn" onclick="toggleCommentSheet()">
                         <i class="fa-regular fa-comments"></i>
                         <span class="badge" id="comment-count-badge">0</span>
                     </button>
-                    <!-- ปุ่มโหวต -->
                     <button id="modal-vote-btn" class="vote-btn" style="width: 140px; padding: 10px;">โหวต</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Comment Sheet (กล่องข้อความเลื่อนขึ้น) -->
     <div class="comment-sheet" id="commentSheet">
         <div class="sheet-header">
             <h3><i class="fa-regular fa-comments"></i> ความคิดเห็น</h3>
@@ -303,7 +303,7 @@
             <div id="comments-list"></div>
         </div>
         <div class="sheet-footer">
-            <div id="comment-input-area" class="comment-form">
+            <div id="comment-input-area" class="comment-form" style="display: none;">
                 <input type="text" class="comment-input" id="comment-input" placeholder="แสดงความคิดเห็น..." maxlength="200">
                 <button class="send-btn" id="send-comment-btn" onclick="sendComment()"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
@@ -313,7 +313,6 @@
         </div>
     </div>
 
-    <!-- Privacy Info Button & Modal -->
     <div class="info-toggle" onclick="openPrivacyModal()">
         <i class="fa-solid fa-info"></i>
     </div>
@@ -321,7 +320,7 @@
     <div id="privacyModal" class="modal">
         <div class="privacy-box">
             <h2><i class="fa-solid fa-shield-halved"></i> ข้อกำหนดและเงื่อนไข</h2>
-            <!-- เนื้อหาเหมือนเดิม -->
+
             <h3><i class="fa-brands fa-discord" style="color:#5865F2;"></i> การเข้าสู่ระบบด้วย Discord</h3>
             <p>
                 ระบบการเข้าสู่ระบบด้วย Discord มีวัตถุประสงค์เพื่อ <strong>"การยืนยันตัวตนเท่านั้น"</strong> เพื่อป้องกันการโหวตซ้ำและสแปม 
@@ -338,7 +337,7 @@
 
             <h3><i class="fa-solid fa-bug" style="color:#f72585;"></i> แจ้งปัญหาการใช้งาน</h3>
             <p>
-                หากพบปัญหาในการใช้งานเว็บไซต์ หรือพบเห็นความผิดปกติ สามารถติดต่อผู้ดูแลระบบได้ที่ zc. <br>
+                หากพบปัญหาในการใช้งานเว็บไซต์ หรือพบเห็นความผิดปกติ สามารถติดต่อผู้ดูแลระบบได้ที่ zc.  <br>
                 <a href="https://x.com/Izc_it" target="_blank" class="contact-link">
                     <i class="fa-brands fa-x-twitter"></i> https://x.com/Izc_it
                 </a>
@@ -350,25 +349,57 @@
     </div>
 
 <script>
-    // ==========================================
-    // 🔴 แก้ไขการตั้งค่าตรงนี้ 🔴
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzBP1KTOwKYil3v-OOE6o3fwXchmP9MnU29Nx5uqyrRod9aI7YycaxTRN0eogfBLy64g/exec"; 
     const CLIENT_ID = "1435981351290409103"; 
-    // ==========================================
-    
     const REDIRECT_URI = window.location.href.split('?')[0]; 
 
     let sessionKey = localStorage.getItem("vote_session_key");
     let userProfile = JSON.parse(localStorage.getItem("vote_user_profile") || "null");
     let isVotingOpen = false;
-    let isSubmitting = false; // 🔥 ตัวแปรป้องกันการกดรัว
-    let allItems = []; let allComments = []; 
-    let currentImageIndex = 0; let serverStatusGlobal = "WAITING"; 
+    let isSubmitting = false;
+    let allItems = []; 
+    let allComments = []; 
+    let currentImageIndex = 0; 
+    let serverStatusGlobal = "WAITING"; 
 
-    // Image Zoom Variables
-    let currentScale = 1; let isDragging = false;
+    let currentScale = 1; 
+    let isDragging = false;
     let startX, startY, translateX = 0, translateY = 0;
     const imgElement = document.getElementById("img01");
+
+    // ✅ NORMALIZE ID
+    function normalizeId(id) {
+        return String(id).replace(/'/g, '').trim();
+    }
+
+    // ✅ SHOW ERROR
+    function showError(message) {
+        const banner = document.getElementById("errorBanner");
+        banner.textContent = "⚠️ " + message;
+        banner.style.display = "block";
+        setTimeout(() => banner.style.display = "none", 5000);
+    }
+
+    // ✅ SHOW SUCCESS TOAST
+    function showSuccess(message) {
+        const toast = document.createElement('div');
+        toast.className = 'success-toast';
+        toast.textContent = '✅ ' + message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ✅ SET LOADING STATE
+    function setLoading(btn, isLoading, originalText = 'ส่ง') {
+        if (isLoading) {
+            btn.disabled = true; /* แก้ไข btn. disabled */
+            btn.dataset.originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.originalText || originalText;
+        }
+    }
 
     function zoomImage(step) {
         currentScale += step;
@@ -386,14 +417,14 @@
         if (currentScale > 1) { isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; imgElement.style.cursor = "grabbing"; }
     });
     window.addEventListener('mousemove', (e) => {
-        if (isDragging) { e.preventDefault(); translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform(); }
+        if (isDragging) { e.preventDefault(); translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform(); } /* แก้ไข e. clientX */
     });
     window.addEventListener('mouseup', () => { isDragging = false; if(currentScale > 1) imgElement.style.cursor = "grab"; });
     imgElement.addEventListener('touchstart', (e) => {
         if (currentScale > 1 && e.touches.length === 1) { isDragging = true; startX = e.touches[0].clientX - translateX; startY = e.touches[0].clientY - translateY; }
     });
     window.addEventListener('touchmove', (e) => {
-        if (isDragging && e.touches.length === 1) { translateX = e.touches[0].clientX - startX; translateY = e.touches[0].clientY - startY; updateTransform(); }
+        if (isDragging && e.touches.length === 1) { translateX = e.touches[0].clientX - startX; translateY = e.touches[0].clientY - startY; updateTransform(); } /* แก้ไข e.touches. length */
     });
     window.addEventListener('touchend', () => { isDragging = false; });
 
@@ -417,11 +448,14 @@
                 const loginRes = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "login", code: code }) });
                 const loginData = await loginRes.json();
                 if (loginData.status === "success") {
-                    sessionKey = loginData.session_key; userProfile = loginData.user;
-                    localStorage.setItem("vote_session_key", sessionKey); localStorage.setItem("vote_user_profile", JSON.stringify(userProfile));
+                    sessionKey = loginData.session_key; 
+                    userProfile = loginData.user;
+                    localStorage.setItem("vote_session_key", sessionKey); 
+                    localStorage.setItem("vote_user_profile", JSON.stringify(userProfile));
                     window.history.replaceState({}, document.title, window.location.pathname);
-                } else { alert("Login Failed"); }
-            } catch (e) {}
+                    showSuccess("เข้าสู่ระบบสำเร็จ");
+                } else { showError("Login ล้มเหลว"); }
+            } catch (e) { showError("เข้าสู่ระบบไม่สำเร็จ"); }
         }
         renderUserBar();
     }
@@ -429,46 +463,80 @@
     function renderUserBar() {
         const bar = document.getElementById("userBar");
         if (userProfile) {
-            const avatarUrl = userProfile.avatar ? `https://cdn.discordapp.com/avatars/${userProfile.id}/${userProfile.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`;
+            const avatarUrl = userProfile.avatar ?  `https://cdn.discordapp.com/avatars/${userProfile.id}/${userProfile.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`; /* แก้ไข avatar path */
             bar.innerHTML = `<div class="user-info"><img src="${avatarUrl}" class="user-avatar"><span class="user-name">${userProfile.username}</span><button onclick="logout()" style="margin-left:8px; border:none; background:none; cursor:pointer; color:#ff5555;"><i class="fa-solid fa-right-from-bracket"></i></button></div>`;
         } else {
             const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
             bar.innerHTML = `<a href="${authUrl}" class="login-btn"><i class="fa-brands fa-discord"></i> Login</a>`;
         }
     }
-    function logout() { if(confirm("ออกจากระบบ?")) { localStorage.removeItem("vote_session_key"); localStorage.removeItem("vote_user_profile"); location.reload(); } }
+    function logout() { if(confirm("ออกจากระบบ? ")) { localStorage.removeItem("vote_session_key"); localStorage.removeItem("vote_user_profile"); location.reload(); } }
 
     async function loadData() {
         try {
             const response = await fetch(SCRIPT_URL);
-            const data = await response.json();
+            const data = await response.json(); /* แก้ไข . json() */
+            
+            if (data.status !== "success") {
+                showError("โหลดข้อมูลล้มเหลว");
+                return;
+            }
+
             serverStatusGlobal = data.votingStatus; 
             handleTimer(data.endTime, serverStatusGlobal);
             allComments = data.comments || [];
             
-            const gallery = document.getElementById("gallery"); gallery.innerHTML = ""; 
-            if (data.entries.length === 0) { gallery.innerHTML = "<p style='margin-top:50px;'>ไม่พบข้อมูล</p>"; return; }
+            const gallery = document.getElementById("gallery"); 
+            gallery.innerHTML = ""; 
+            if (!data.entries || data.entries.length === 0) { 
+                gallery.innerHTML = "<p style='margin-top:50px;'>ไม่พบข้อมูล</p>"; 
+                return; 
+            }
 
-            allItems = data.entries.map(item => ({ ...item, score: data.votes[item.id] || 0 }));
-            if (serverStatusGlobal === "CLOSED") allItems.sort((a, b) => b.score - a.score); else allItems.sort((a, b) => a.id - b.id);
+            allItems = data.entries.map(item => ({ 
+                ...item, /* แก้ไข ... item */
+                id: normalizeId(item.id),
+                score: data.votes[normalizeId(item.id)] || 0 
+            }));
+            
+            if (serverStatusGlobal === "CLOSED") allItems.sort((a, b) => b.score - a.score); /* แก้ไข b. score */
+            else allItems.sort((a, b) => a.id - b.id);
 
             allItems.forEach((item, index) => {
-                const card = document.createElement("div"); card.className = "card";
-                let rankBadge = ""; let btnText = 'โหวต'; let btnClass = ""; let btnDisabled = false;
+                const card = document.createElement("div"); 
+                card.className = "card";
+                let rankBadge = ""; 
+                let btnText = 'โหวต'; 
+                let btnClass = ""; 
+                let btnDisabled = false;
 
                 if (serverStatusGlobal === "CLOSED") {
-                    btnText = "จบ"; btnDisabled = true;
-                    if (index === 0) { card.classList.add("winner-1"); rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; }
-                    else if (index === 1) { card.classList.add("winner-2"); rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; }
-                    else if (index === 2) { card.classList.add("winner-3"); rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; }
-                    else { rankBadge = `<div class='rank-badge' style='color:#555; border:2px solid #eee; font-size:1.2em; font-weight:bold;'>${index + 1}</div>`; }
+                    btnText = "จบ"; 
+                    btnDisabled = true;
+                    if (index === 0) { 
+                        card.classList.add("winner-1"); 
+                        rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; 
+                    }
+                    else if (index === 1) { 
+                        card.classList.add("winner-2"); /* แก้ไข . add */
+                        rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; 
+                    }
+                    else if (index === 2) { 
+                        card.classList.add("winner-3"); /* แก้ไข . add */
+                        rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; 
+                    }
+                    else { 
+                        rankBadge = `<div class='rank-badge' style='color:#555; border:2px solid #eee; font-size:1.2em; font-weight:bold;'>${index + 1}</div>`; 
+                    }
                 } else if (serverStatusGlobal === "WAITING") {
-                    btnText = 'รอเปิดโหวต'; btnClass = "waiting"; btnDisabled = true;
+                    btnText = 'รอเปิดโหวต'; 
+                    btnClass = "waiting"; 
+                    btnDisabled = true;
                 }
 
                 card.innerHTML = `
                     ${rankBadge}
-                    <div class="votes-count"><i class="fa-solid fa-star text-warning"></i> ${item.score}</div>
+                    <div class="votes-count"><i class="fa-solid fa-star"></i> ${item.score}</div>
                     <div class="img-container"><img src="${item.url}" onclick="openModal(${index})" loading="lazy"></div>
                     <div class="info">
                         <div class="author"><i class="fa-solid fa-user-pen"></i> ${item.author}</div>
@@ -477,15 +545,14 @@
                 gallery.appendChild(card);
             });
         } catch (error) { 
-            // แสดง Error ชัดเจนถ้าโหลดไม่ได้
-            document.getElementById("gallery").innerHTML = `<div class='loading-text' style='color:red;'>เกิดข้อผิดพลาด: ${error.message}</div>`;
+            showError("เกิดข้อผิดพลาด: " + error.message);
         }
     }
 
     function handleTimer(endTimeStr, status) {
         const timerElem = document.getElementById("timer");
         if (status === "WAITING") { 
-            timerElem.innerHTML = "<i class='fa-solid fa-hourglass'></i> รอ Admin เปิดโหวต..."; 
+            timerElem.innerHTML = "<i class='fa-solid fa-hourglass'></i> รอ Admin เปิดโหวต... "; /* แก้ไข . innerHTML */
             timerElem.style.color = "#d4a017"; 
             isVotingOpen = false; 
             return; 
@@ -497,8 +564,7 @@
             return; 
         }
         
-        // 🔥 แก้ไขการนับเวลา (Robust Time Parsing)
-        const endTime = new Date(endTimeStr).getTime();
+        const endTime = new Date(endTimeStr).getTime(); /* แก้ไข . getTime() */
         if (isNaN(endTime)) { timerElem.innerHTML = "ไม่พบเวลาปิดโหวต"; isVotingOpen = true; return; }
 
         const interval = setInterval(() => {
@@ -507,179 +573,191 @@
             
             if (distance < 0) { 
                 clearInterval(interval); 
-                timerElem.innerHTML = "<i class='fa-solid fa-clock'></i> หมดเวลา"; 
+                timerElem.innerHTML = "<i class='fa-solid fa-clock'></i> หมดเวลา"; /* แก้ไข . innerHTML */
                 timerElem.style.color = "#555";
                 isVotingOpen = false; 
                 setTimeout(() => location.reload(), 2000); 
             } else { 
                 isVotingOpen = true; 
                 const h = Math.floor(distance/3600000); 
-                const m = Math.floor((distance%3600000)/60000); 
+                const m = Math.floor((distance%3600000)/60000); /* แก้ไข Math. floor */
                 const s = Math.floor((distance%60000)/1000);
                 
-                // 🔥 คืนค่าสีชมพูและไอคอนนาฬิกาทราย
-                timerElem.innerHTML = `<i class='fa-solid fa-hourglass-half'></i> ปิดโหวตใน: ${h}ชม. ${m}น. ${s}วิ.`;
-                timerElem.style.color = "#f72585";
+                timerElem.innerHTML = `<i class='fa-solid fa-hourglass-half'></i> ปิดโหวตใน: ${h}ชม. ${m}น. ${s}วิ. `;
+                timerElem.style.color = "#f72585"; /* แก้ไข . style */
             }
         }, 1000);
     }
 
     function vote(itemId) {
-        if (!isVotingOpen) return;
-        if (!sessionKey) { alert("กรุณา Login"); return; }
-        if (isSubmitting) return; // 🔥 ป้องกันกดซ้ำ
+        if (!  isVotingOpen) { showError("การโหวตยังไม่เปิด"); return; }
+        if (! sessionKey) { showError("กรุณา Login"); return; }
+        if (isSubmitting) { showError("กำลังประมวลผล"); return; }
 
         const btnGallery = document.getElementById(`btn-${itemId}`);
         const btnModal = document.getElementById(`modal-vote-btn`);
-        const originalTextGallery = btnGallery ? btnGallery.innerHTML : "";
-        const originalTextModal = btnModal ? btnModal.innerHTML : "";
 
-        // 🔥 ล็อกปุ่ม
         isSubmitting = true;
-        if(btnGallery) { btnGallery.disabled = true; btnGallery.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
-        if(btnModal) { btnModal.disabled = true; btnModal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
+        if(btnGallery) setLoading(btnGallery, true);
+        if(btnModal) setLoading(btnModal, true);
 
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type':'text/plain'}, body: JSON.stringify({ action: "vote", session_key: sessionKey, voted_for_id: itemId }) })
-        .then(() => { 
-            setTimeout(() => { 
-                alert("บันทึกแล้ว!"); 
-                location.reload(); 
-            }, 1000); 
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            headers: {'Content-Type':'text/plain'}, 
+            body: JSON.stringify({ action: "vote", session_key: sessionKey, voted_for_id: itemId }) 
         })
-        .catch(() => {
-            alert("เกิดข้อผิดพลาด");
+        .then(() => { 
+            showSuccess("โหวตแล้ว!");
+            
+            setTimeout(() => {
+                loadData();
+                closeModal();
+            }, 2000);
+        })
+        . catch((error) => {
+            showError("เกิดข้อผิดพลาด");
             isSubmitting = false;
-            // คืนค่าปุ่ม
-            if(btnGallery) { btnGallery.disabled = false; btnGallery.innerHTML = originalTextGallery; }
-            if(btnModal) { btnModal.disabled = false; btnModal.innerHTML = originalTextModal; }
+            if(btnGallery) setLoading(btnGallery, false);
+            if(btnModal) setLoading(btnModal, false);
         });
     }
 
     function openModal(index) {
-        currentImageIndex = index; updateModalContent();
-        document.getElementById("modal").style.display = "block";
+        currentImageIndex = index; 
+        updateModalContent();
+        document.getElementById("modal").style.display = "block"; /* แก้ไข . style */
         document.body.classList.add("modal-open");
         resetZoom();
     }
+    
     function closeModal() {
         document.getElementById("modal").style.display = "none";
-        document.body.classList.remove("modal-open");
+        document.body.classList.remove("modal-open"); /* แก้ไข . classList */
         document.getElementById("commentSheet").classList.remove("active");
     }
 
     function updateModalContent() {
         if (allItems.length === 0) return;
         const item = allItems[currentImageIndex];
-        document.getElementById("img01").src = item.url;
-        document.querySelector("#modal-author span").innerText = item.author;
-
-        const btn = document.getElementById("modal-vote-btn");
-        btn.onclick = () => vote(item.id);
+        const img = document.getElementById("img01");
         
-        btn.classList.remove('waiting');
-        if (serverStatusGlobal === "CLOSED") { btn.innerText = "จบ"; btn.disabled = true; }
-        else if (serverStatusGlobal === "WAITING") { 
-            btn.innerText = "รอเปิดโหวต"; 
-            btn.disabled = true; 
-            btn.classList.add('waiting'); 
+        img.src = item.url;
+        document.getElementById("modal-author").innerHTML = `<i class="fa-solid fa-user-pen"></i> ${item.author}`;
+        
+        const voteBtn = document.getElementById("modal-vote-btn");
+        voteBtn.onclick = () => vote(item.id);
+        
+        if (serverStatusGlobal === "WAITING") { 
+            voteBtn.innerText = "รอเปิดโหวต"; 
+            voteBtn.classList.add("waiting"); 
+            voteBtn.disabled = true; 
+        } else if (serverStatusGlobal === "CLOSED") { 
+            voteBtn.innerText = "จบการโหวต"; 
+            voteBtn.classList.remove("waiting");
+            voteBtn.disabled = true; 
+        } else {
+            voteBtn.innerText = "โหวต";
+            voteBtn.classList.remove("waiting");
+            voteBtn.disabled = false;
         }
-        else { btn.innerText = "โหวต"; btn.disabled = !isVotingOpen; }
 
         renderComments(item.id);
     }
 
+    function changeImage(n) {
+        currentImageIndex += n;
+        if (currentImageIndex >= allItems.length) currentImageIndex = 0;
+        if (currentImageIndex < 0) currentImageIndex = allItems.length - 1;
+        resetZoom();
+        updateModalContent();
+    }
+
     function renderComments(imageId) {
-        const comments = allComments.filter(c => c.imageId.replace(/'/g, '') == String(imageId).replace(/'/g, ''));
-        document.getElementById("comment-count-badge").innerText = comments.length;
-        
         const list = document.getElementById("comments-list");
-        list.innerHTML = "";
-        if (comments.length === 0) list.innerHTML = "<div style='text-align:center; color:#ccc; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>";
-        else {
-            comments.forEach(c => {
-                const avatar = c.avatar ? `https://cdn.discordapp.com/avatars/${c.userId.replace(/'/g, '')}/${c.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`;
-                const time = new Date(c.timestamp).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-                list.insertAdjacentHTML('beforeend', `
-                    <div class="comment-item">
-                        <img src="${avatar}" class="comment-avatar">
-                        <div class="comment-bubble">
-                            <div class="comment-user">${c.username}</div>
-                            <div class="comment-text">${c.text}</div>
-                            <div class="comment-time">${time}</div>
-                        </div>
+        const filtered = allComments.filter(c => normalizeId(c.imageId) === normalizeId(imageId));
+        
+        document.getElementById("comment-count-badge").innerText = filtered.length;
+        
+        if (filtered.length === 0) {
+            list.innerHTML = "<div style='text-align:center; color:#999; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>";
+        } else {
+            list.innerHTML = filtered.map(c => `
+                <div class="comment-item">
+                    <img src="${c.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="comment-avatar">
+                    <div class="comment-bubble">
+                        <div class="comment-user">${c.username}</div>
+                        <div class="comment-text">${c.text}</div>
+                        <div class="comment-time">${c.time}</div>
                     </div>
-                `);
-            });
+                </div>
+            `).join('');
         }
         
-        document.getElementById("comment-input-area").style.display = sessionKey ? "flex" : "none";
-        document.getElementById("login-warning").style.display = sessionKey ? "none" : "block";
+        const inputArea = document.getElementById("comment-input-area");
+        const warning = document.getElementById("login-warning");
+        if (sessionKey) {
+            inputArea.style.display = "flex";
+            warning.style.display = "none";
+        } else {
+            inputArea.style.display = "none";
+            warning.style.display = "block";
+        }
     }
 
     function sendComment() {
         if (!sessionKey) return;
-        if (isSubmitting) return; // 🔥 ป้องกันกดซ้ำ
-
         const input = document.getElementById("comment-input");
         const text = input.value.trim();
-        const item = allItems[currentImageIndex];
-        if (!text || !item) return;
+        if (!text) return;
 
-        // 🔥 ล็อกปุ่มส่ง
-        isSubmitting = true;
-        const btn = document.getElementById("send-comment-btn");
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        input.disabled = true;
+        const currentItem = allItems[currentImageIndex];
+        const sendBtn = document.getElementById("send-comment-btn");
+        
+        setLoading(sendBtn, true, '<i class="fa-solid fa-paper-plane"></i>');
 
-        const payload = JSON.stringify({ action: "add_comment", session_key: sessionKey, image_id: item.id, comment: text });
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type':'text/plain'}, body: payload })
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {'Content-Type':'text/plain'},
+            body: JSON.stringify({ action: "comment", session_key: sessionKey, image_id: currentItem.id, text: text })
+        })
         .then(() => {
-            allComments.push({ timestamp: new Date().toISOString(), imageId: item.id, userId: userProfile.id, username: userProfile.username, avatar: userProfile.avatar, text: text });
-            renderComments(item.id); 
             input.value = "";
+            showSuccess("ส่งความคิดเห็นแล้ว");
             
-            // 🔥 ปลดล็อก
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-            input.disabled = false;
-            isSubmitting = false;
-            input.focus();
+            // Add Optimistic UI
+            const now = new Date();
+            const timeString = `${now.getDate()}/${now.getMonth()+1} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+            allComments.push({
+                imageId: currentItem.id,
+                username: userProfile.username,
+                avatar: userProfile.avatar ? `https://cdn.discordapp.com/avatars/${userProfile.id}/${userProfile.avatar}.png` : null,
+                text: text,
+                time: timeString
+            });
+            renderComments(currentItem.id);
+            setLoading(sendBtn, false, '<i class="fa-solid fa-paper-plane"></i>');
         })
         .catch(() => {
-            alert("ส่งไม่สำเร็จ");
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-            input.disabled = false;
-            isSubmitting = false;
+            showError("ส่งไม่สำเร็จ");
+            setLoading(sendBtn, false, '<i class="fa-solid fa-paper-plane"></i>');
         });
     }
 
-    function changeImage(step) {
-        currentImageIndex += step;
-        if (currentImageIndex >= allItems.length) currentImageIndex = 0; else if (currentImageIndex < 0) currentImageIndex = allItems.length - 1;
-        updateModalContent(); resetZoom();
-    }
-
-    document.addEventListener('keydown', (e) => {
-        if (document.getElementById("modal").style.display === "block") {
-            if (e.key === "ArrowLeft") changeImage(-1); if (e.key === "ArrowRight") changeImage(1); if (e.key === "Escape") closeModal();
-        }
-    });
-
-    let touchStartX = 0;
-    const modalContent = document.getElementById("modal");
-    modalContent.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
-    modalContent.addEventListener('touchend', (e) => {
-        if(currentScale === 1 && Math.abs(e.changedTouches[0].screenX - touchStartX) > 50) changeImage(e.changedTouches[0].screenX < touchStartX ? 1 : -1);
-    }, {passive: true});
-
     function openPrivacyModal() { document.getElementById("privacyModal").style.display = "block"; }
     function closePrivacyModal() { document.getElementById("privacyModal").style.display = "none"; }
-    window.onclick = function(event) { if (event.target == document.getElementById("modal")) closeModal(); if (event.target == document.getElementById("privacyModal")) closePrivacyModal(); }
 
-    checkLogin(); loadData();
+    window.onclick = function(event) {
+        if (event.target == document.getElementById("modal")) closeModal();
+        if (event.target == document.getElementById("privacyModal")) closePrivacyModal();
+    }
+
+    // Init
+    checkLogin();
+    loadData();
+
 </script>
+
 </body>
 </html>
