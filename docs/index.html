@@ -349,430 +349,425 @@
     </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzBP1KTOwKYil3v-OOE6o3fwXchmP9MnU29Nx5uqyrRod9aI7YycaxTRN0eogfBLy64g/exec"; 
-    const CLIENT_ID = "1435981351290409103"; 
-    const REDIRECT_URI = window.location.href.split('?')[0]; 
+    // Load exifr for EXIF metadata parsing (used to extract DPI, color space, etc.).
+    // Use the UMD bundle so `exifr` is available on `window.exifr`.
+    (function(){
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.min.js';
+        s.async = true;
+        document.head.appendChild(s);
+    })();
+
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw3WA0KZAWuukYQFnWqG_LiJ4znL_N8mPGOHDph3A9vjQjDO-DapLdkX0bTnIgVK1gDnw/exec";
+    // Use the full Client ID (no replace). Make sure this matches your Discord App's Client ID.
+    const CLIENT_ID = "1435981351290409103";
+    const REDIRECT_URI = window.location.href.split('?')[0];
 
     let sessionKey = localStorage.getItem("vote_session_key");
     let userProfile = JSON.parse(localStorage.getItem("vote_user_profile") || "null");
     let isVotingOpen = false;
     let isSubmitting = false;
-    let allItems = []; 
-    let allComments = []; 
-    let currentImageIndex = 0; 
-    let serverStatusGlobal = "WAITING"; 
+    let allItems = [];
+    let allComments = [];
+    let currentImageIndex = 0;
+    let serverStatusGlobal = "WAITING";
+    let lastDataHash = null;
 
-    let currentScale = 1; 
+    let currentScale = 1;
     let isDragging = false;
     let startX, startY, translateX = 0, translateY = 0;
     const imgElement = document.getElementById("img01");
 
-    // ✅ NORMALIZE ID
-    function normalizeId(id) {
-        return String(id).replace(/'/g, '').trim();
-    }
+    // (Client-side blacklist removed) All entries from the server are now shown.
 
-    // ✅ SHOW ERROR
-    function showError(message) {
-        const banner = document.getElementById("errorBanner");
-        banner.textContent = "⚠️ " + message;
-        banner.style.display = "block";
-        setTimeout(() => banner.style.display = "none", 5000);
-    }
+    // utilities
+    function normalizeId(id) { return String(id).replace(/'/g, '').trim(); }
+    function showError(message) { const b = document.getElementById('errorBanner'); b.textContent = '⚠️ ' + message; b.style.display='block'; setTimeout(()=>b.style.display='none',5000); }
+    function showSuccess(message) { const t = document.createElement('div'); t.className='success-toast'; t.textContent='✅ '+message; document.body.appendChild(t); setTimeout(()=>t.remove(),3000);} 
+    function setLoading(btn, isLoading, originalText='ส่ง'){ if(!btn) return; if(isLoading){ btn.disabled=true; btn.dataset.originalText = btn.innerHTML; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>'; } else { btn.disabled=false; btn.innerHTML = btn.dataset.originalText || originalText; }}
 
-    // ✅ SHOW SUCCESS TOAST
-    function showSuccess(message) {
-        const toast = document.createElement('div');
-        toast.className = 'success-toast';
-        toast.textContent = '✅ ' + message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
+    function zoomImage(step){ currentScale += step; if(currentScale<1) currentScale=1; if(currentScale>8) currentScale=8; updateTransform(); }
+    function resetZoom(){ currentScale=1; translateX=0; translateY=0; updateTransform(); }
+    function updateTransform(){ imgElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`; imgElement.style.cursor = currentScale>1 ? 'grab':'default'; }
 
-    // ✅ SET LOADING STATE
-    function setLoading(btn, isLoading, originalText = 'ส่ง') {
-        if (isLoading) {
-            btn.disabled = true; /* แก้ไข btn. disabled */
-            btn.dataset.originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        } else {
-            btn.disabled = false;
-            btn.innerHTML = btn.dataset.originalText || originalText;
+    imgElement.addEventListener('mousedown', e=>{ if(currentScale>1){ isDragging=true; startX = e.clientX - translateX; startY = e.clientY - translateY; imgElement.style.cursor='grabbing'; } });
+    window.addEventListener('mousemove', e=>{ if(isDragging){ e.preventDefault(); translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform(); } });
+    window.addEventListener('mouseup', ()=>{ isDragging=false; if(currentScale>1) imgElement.style.cursor='grab'; });
+    imgElement.addEventListener('touchstart', e=>{ if(currentScale>1 && e.touches.length===1){ isDragging=true; startX = e.touches[0].clientX - translateX; startY = e.touches[0].clientY - translateY; } });
+    window.addEventListener('touchmove', e=>{ if(isDragging && e.touches.length===1){ translateX = e.touches[0].clientX - startX; translateY = e.touches[0].clientY - startY; updateTransform(); } });
+    window.addEventListener('touchend', ()=>{ isDragging=false; });
+
+    function toggleFullScreen(){ const modal = document.getElementById('modal'); if(!document.fullscreenElement){ if(modal.requestFullscreen) modal.requestFullscreen(); else if(modal.webkitRequestFullscreen) modal.webkitRequestFullscreen(); } else { if(document.exitFullscreen) document.exitFullscreen(); } }
+    function toggleCommentSheet(){ document.getElementById('commentSheet').classList.toggle('active'); }
+
+    async function checkLogin(){ const urlParams = new URLSearchParams(window.location.search); const code = urlParams.get('code'); if(code){ try{ const res = await fetch(SCRIPT_URL,{ method:'POST', body: JSON.stringify({action:'login', code}) }); const j = await res.json(); if(j.status==='success'){ sessionKey = j.session_key; userProfile = j.user; localStorage.setItem('vote_session_key', sessionKey); localStorage.setItem('vote_user_profile', JSON.stringify(userProfile)); window.history.replaceState({}, document.title, window.location.pathname); showSuccess('เข้าสู่ระบบสำเร็จ'); } else { showError('Login ล้มเหลว'); } } catch(e){ showError('เข้าสู่ระบบไม่สำเร็จ'); } } renderUserBar(); }
+
+    function renderUserBar(){ const bar = document.getElementById('userBar'); if(userProfile){ const avatarUrl = userProfile.avatar ? `https://cdn.discordapp.com/avatars/${userProfile.id}/${userProfile.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`; bar.innerHTML = `<div class="user-info"><img src="${avatarUrl}" class="user-avatar"><span class="user-name">${userProfile.username}</span><button onclick="logout()" style="margin-left:8px; border:none; background:none; cursor:pointer; color:#ff5555;"><i class="fa-solid fa-right-from-bracket"></i></button></div>`; } else { const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`; bar.innerHTML = `<a href="${authUrl}" class="login-btn"><i class="fa-brands fa-discord"></i> Login</a>`; } }
+    function logout(){ if(confirm('ออกจากระบบ? ')){ localStorage.removeItem('vote_session_key'); localStorage.removeItem('vote_user_profile'); sessionKey=null; userProfile=null; renderUserBar(); location.reload(); } }
+
+    // Polling & update
+    const POLL_MS = 5000;
+    async function pollAndUpdate(){
+        try{
+            const res = await fetch(SCRIPT_URL);
+            const data = await res.json();
+            const hash = JSON.stringify({entries:data.entries, votes:data.votes, comments:data.comments, votingStatus:data.votingStatus, endTime:data.endTime});
+            if(hash !== lastDataHash){ lastDataHash = hash; window._lastServerData = data; await updateFromData(data); }
+        } catch(e){
+            console.warn('Poll failed', e);
         }
     }
 
-    function zoomImage(step) {
-        currentScale += step;
-        if (currentScale < 1) currentScale = 1; 
-        if (currentScale > 5) currentScale = 5;
-        updateTransform();
-    }
-    function resetZoom() { currentScale = 1; translateX = 0; translateY = 0; updateTransform(); }
-    function updateTransform() {
-        imgElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
-        imgElement.style.cursor = currentScale > 1 ? "grab" : "default";
-    }
+    async function loadData(){ await pollAndUpdate(); setInterval(pollAndUpdate, POLL_MS); }
 
-    imgElement.addEventListener('mousedown', (e) => {
-        if (currentScale > 1) { isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; imgElement.style.cursor = "grabbing"; }
-    });
-    window.addEventListener('mousemove', (e) => {
-        if (isDragging) { e.preventDefault(); translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform(); } /* แก้ไข e. clientX */
-    });
-    window.addEventListener('mouseup', () => { isDragging = false; if(currentScale > 1) imgElement.style.cursor = "grab"; });
-    imgElement.addEventListener('touchstart', (e) => {
-        if (currentScale > 1 && e.touches.length === 1) { isDragging = true; startX = e.touches[0].clientX - translateX; startY = e.touches[0].clientY - translateY; }
-    });
-    window.addEventListener('touchmove', (e) => {
-        if (isDragging && e.touches.length === 1) { translateX = e.touches[0].clientX - startX; translateY = e.touches[0].clientY - startY; updateTransform(); } /* แก้ไข e.touches. length */
-    });
-    window.addEventListener('touchend', () => { isDragging = false; });
+    // read metadata (size,type,dimensions, dpi, colorspace) - try HEAD then try to parse EXIF via exifr
+    async function getImageMetadata(url){
+        const meta = { size: null, type: null, width: null, height: null, ext: null, dpiX: null, dpiY: null, dpiUnit: null, colorSpace: null, components: null, detectedType: null };
+        try{
+            const u = new URL(url);
+            meta.ext = (u.pathname.split('.').pop()||'').toLowerCase();
 
-    function toggleFullScreen() {
-        const modal = document.getElementById("modal");
-        if (!document.fullscreenElement) {
-            if(modal.requestFullscreen) modal.requestFullscreen();
-            else if(modal.webkitRequestFullscreen) modal.webkitRequestFullscreen();
-        } else { if(document.exitFullscreen) document.exitFullscreen(); }
-    }
+            // Try HEAD for content-length / content-type (may be blocked on some hosts)
+            try{
+                const head = await fetch(url, { method: 'HEAD', mode: 'cors' });
+                if(head && head.ok){
+                    const cl = head.headers.get('content-length');
+                    const ct = head.headers.get('content-type');
+                    if(cl) meta.size = parseInt(cl, 10);
+                    if(ct) meta.type = ct;
+                }
+            } catch(e){ /* ignore HEAD failure */ }
 
-    function toggleCommentSheet() {
-        document.getElementById("commentSheet").classList.toggle("active");
-    }
+            // Try fetching ArrayBuffer and parse EXIF with exifr if available
+            let didParseExif = false;
+            try{
+                if(window.exifr){
+                    const ab = await fetch(url, { method: 'GET', mode: 'cors' }).then(r => r.arrayBuffer());
+                    // Try to infer type from first bytes if content-type not present
+                    if(!meta.type){
+                        const bytes = new Uint8Array(ab.slice(0, 16));
+                        // JPEG magic
+                        if(bytes[0]===0xFF && bytes[1]===0xD8) meta.detectedType = 'image/jpeg';
+                        // PNG magic
+                        else if(bytes[0]===0x89 && bytes[1]===0x50 && bytes[2]===0x4E) meta.detectedType = 'image/png';
+                        // GIF magic
+                        else if(bytes[0]===0x47 && bytes[1]===0x49 && bytes[2]===0x46) meta.detectedType = 'image/gif';
+                    }
 
-    async function checkLogin() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        if (code) {
-            try {
-                const loginRes = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "login", code: code }) });
-                const loginData = await loginRes.json();
-                if (loginData.status === "success") {
-                    sessionKey = loginData.session_key; 
-                    userProfile = loginData.user;
-                    localStorage.setItem("vote_session_key", sessionKey); 
-                    localStorage.setItem("vote_user_profile", JSON.stringify(userProfile));
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    showSuccess("เข้าสู่ระบบสำเร็จ");
-                } else { showError("Login ล้มเหลว"); }
-            } catch (e) { showError("เข้าสู่ระบบไม่สำเร็จ"); }
-        }
-        renderUserBar();
-    }
+                    // parse EXIF tags
+                    try{
+                        const exif = await window.exifr.parse(ab, true);
+                        if(exif){
+                            // DPI: XResolution / YResolution and ResolutionUnit
+                            if(exif.XResolution) meta.dpiX = exif.XResolution;
+                            if(exif.YResolution) meta.dpiY = exif.YResolution;
+                            if(exif.ResolutionUnit) meta.dpiUnit = exif.ResolutionUnit; // 2 = inches, 3 = cm
 
-    function renderUserBar() {
-        const bar = document.getElementById("userBar");
-        if (userProfile) {
-            const avatarUrl = userProfile.avatar ?  `https://cdn.discordapp.com/avatars/${userProfile.id}/${userProfile.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`; /* แก้ไข avatar path */
-            bar.innerHTML = `<div class="user-info"><img src="${avatarUrl}" class="user-avatar"><span class="user-name">${userProfile.username}</span><button onclick="logout()" style="margin-left:8px; border:none; background:none; cursor:pointer; color:#ff5555;"><i class="fa-solid fa-right-from-bracket"></i></button></div>`;
-        } else {
-            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
-            bar.innerHTML = `<a href="${authUrl}" class="login-btn"><i class="fa-brands fa-discord"></i> Login</a>`;
-        }
-    }
-    function logout() { if(confirm("ออกจากระบบ? ")) { localStorage.removeItem("vote_session_key"); localStorage.removeItem("vote_user_profile"); location.reload(); } }
+                            // ColorSpace tag (1 = sRGB, 65535 = Uncalibrated)
+                            if(exif.ColorSpace) meta.colorSpace = exif.ColorSpace;
 
-    async function loadData() {
-        try {
-            const response = await fetch(SCRIPT_URL);
-            const data = await response.json(); /* แก้ไข . json() */
-            
-            if (data.status !== "success") {
-                showError("โหลดข้อมูลล้มเหลว");
-                return;
+                            // ComponentsConfiguration or BitsPerSample could indicate components
+                            if(exif.ComponentsConfiguration) meta.components = exif.ComponentsConfiguration;
+                        }
+                        didParseExif = true;
+                    }catch(e){ /* parsing failed */ }
+                }
+            }catch(e){ /* ArrayBuffer fetch or exifr parse blocked by CORS or other errors */ }
+
+            // Always attempt to get pixel dimensions using an Image element (works even when EXIF parse fails)
+            await new Promise((resolve)=>{
+                const i = new Image();
+                i.crossOrigin = 'anonymous';
+                i.onload = ()=>{ meta.width = i.naturalWidth; meta.height = i.naturalHeight; resolve(); };
+                i.onerror = ()=>resolve();
+                i.src = url;
+            });
+
+            // If exifr parse failed and we still don't have type, try to derive from extension or detectedType
+            if(!meta.type){
+                if(meta.detectedType) meta.type = meta.detectedType;
+                else if(meta.ext) meta.type = 'image/' + (meta.ext === 'jpg' ? 'jpeg' : meta.ext);
             }
 
-            serverStatusGlobal = data.votingStatus; 
+            // Normalize DPI values if unit is centimeters (3) -> convert to DPI
+            if(meta.dpiUnit && (meta.dpiUnit === 3) && meta.dpiX){
+                // DPI from dots per cm -> convert to per inch
+                meta.dpiX = Math.round(meta.dpiX * 2.54);
+                if(meta.dpiY) meta.dpiY = Math.round(meta.dpiY * 2.54);
+            }
+
+            // Human-friendly colorSpace label
+            if(meta.colorSpace){
+                if(meta.colorSpace === 1) meta.colorSpaceLabel = 'sRGB';
+                else if(meta.colorSpace === 65535) meta.colorSpaceLabel = 'Uncalibrated';
+                else meta.colorSpaceLabel = String(meta.colorSpace);
+            }
+
+        } catch (e){
+            console.warn('meta error', e);
+        }
+        return meta;
+    }
+
+    // update DOM from server data
+    async function updateFromData(data){ try{
+            serverStatusGlobal = data.votingStatus || 'WAITING';
             handleTimer(data.endTime, serverStatusGlobal);
             allComments = data.comments || [];
-            
-            const gallery = document.getElementById("gallery"); 
-            gallery.innerHTML = ""; 
-            if (!data.entries || data.entries.length === 0) { 
-                gallery.innerHTML = "<p style='margin-top:50px;'>ไม่พบข้อมูล</p>"; 
-                return; 
+
+            // prepare items (dedupe by id in case server returned duplicates)
+            const rawEntries = (data.entries || []);
+            const seen = {};
+            allItems = [];
+            for (const it of rawEntries){
+                const nid = normalizeId(it.id);
+                if(seen[nid]) continue;
+                seen[nid] = true;
+                allItems.push({ ...it, id: nid, score: data.votes ? (data.votes[nid]||0) : 0 });
+            }
+            // sort
+            if(serverStatusGlobal === 'CLOSED') allItems.sort((a,b)=> b.score - a.score); else allItems.sort((a,b)=> (a.id<b.id?-1:1));
+
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+
+            // determine if current user already voted
+            // Prefer authoritative server data. Only fall back to localStorage when
+            // the server did not provide a `userVotes` map (e.g. offline or older
+            // server response). If the server DID provide `userVotes` but there is
+            // no entry for this user, that means the vote sheet has no record —
+            // clear any stale local cache so the UI reflects server state.
+            let userVotedFor = null;
+            if (userProfile) {
+                if (data.userVotes && Object.prototype.hasOwnProperty.call(data.userVotes, String(userProfile.id))) {
+                    userVotedFor = data.userVotes[String(userProfile.id)];
+                } else if (!data.userVotes) {
+                    // Server didn't provide userVotes at all — possibly an older
+                    // response; fall back to local cache.
+                    const local = localStorage.getItem('vote_voted_for'); if (local) userVotedFor = local;
+                } else {
+                    // Server provided userVotes but no entry for this user —
+                    // that means the sheet has no vote for them. Remove stale
+                    // cached vote to avoid showing incorrect disabled buttons.
+                    localStorage.removeItem('vote_voted_for');
+                    userVotedFor = null;
+                }
             }
 
-            allItems = data.entries.map(item => ({ 
-                ...item, /* แก้ไข ... item */
-                id: normalizeId(item.id),
-                score: data.votes[normalizeId(item.id)] || 0 
-            }));
-            
-            if (serverStatusGlobal === "CLOSED") allItems.sort((a, b) => b.score - a.score); /* แก้ไข b. score */
-            else allItems.sort((a, b) => a.id - b.id);
+            if(allItems.length === 0){ gallery.innerHTML = "<p style='margin-top:50px;'>ไม่พบข้อมูล</p>"; return; }
 
-            allItems.forEach((item, index) => {
-                const card = document.createElement("div"); 
-                card.className = "card";
-                let rankBadge = ""; 
-                let btnText = 'โหวต'; 
-                let btnClass = ""; 
-                let btnDisabled = false;
+            // render cards
+            for(let index=0; index<allItems.length; index++){
+                const item = allItems[index];
+                const card = document.createElement('div'); card.className='card';
+                let rankBadge=''; let btnText='โหวต'; let btnClass=''; let btnDisabled=false;
+                if(serverStatusGlobal==='CLOSED'){ btnText='จบ'; btnDisabled=true; if(index===0){ card.classList.add('winner-1'); rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; } else if(index===1){ card.classList.add('winner-2'); rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; } else if(index===2){ card.classList.add('winner-3'); rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; } else { rankBadge = `<div class='rank-badge' style='color:#555; border:2px solid #eee; font-size:1.2em; font-weight:bold;'>${index+1}</div>`; } }
+                else if(serverStatusGlobal === 'WAITING'){ btnText='รอเปิดโหวต'; btnClass='waiting'; btnDisabled=true; }
 
-                if (serverStatusGlobal === "CLOSED") {
-                    btnText = "จบ"; 
-                    btnDisabled = true;
-                    if (index === 0) { 
-                        card.classList.add("winner-1"); 
-                        rankBadge = "<div class='rank-badge gold'><i class='fa-solid fa-crown'></i></div>"; 
-                    }
-                    else if (index === 1) { 
-                        card.classList.add("winner-2"); /* แก้ไข . add */
-                        rankBadge = "<div class='rank-badge silver'><i class='fa-solid fa-medal'></i></div>"; 
-                    }
-                    else if (index === 2) { 
-                        card.classList.add("winner-3"); /* แก้ไข . add */
-                        rankBadge = "<div class='rank-badge bronze'><i class='fa-solid fa-medal'></i></div>"; 
-                    }
-                    else { 
-                        rankBadge = `<div class='rank-badge' style='color:#555; border:2px solid #eee; font-size:1.2em; font-weight:bold;'>${index + 1}</div>`; 
-                    }
-                } else if (serverStatusGlobal === "WAITING") {
-                    btnText = 'รอเปิดโหวต'; 
-                    btnClass = "waiting"; 
-                    btnDisabled = true;
-                }
+                // if user already voted, disable others and mark the voted one
+                if(userVotedFor){ btnDisabled = true; if(String(item.id) === String(userVotedFor)){ btnText='โหวตแล้ว'; btnClass=''; } }
 
                 card.innerHTML = `
                     ${rankBadge}
                     <div class="votes-count"><i class="fa-solid fa-star"></i> ${item.score}</div>
-                    <div class="img-container"><img src="${item.url}" onclick="openModal(${index})" loading="lazy"></div>
+                    <div class="img-container"><img src="${item.url}" onclick="openModal(${index})" loading="lazy" alt="${item.author}"></div>
                     <div class="info">
                         <div class="author"><i class="fa-solid fa-user-pen"></i> ${item.author}</div>
+                        <div id="meta-${item.id}" style="font-size:0.85em; color:#777;">loading…</div>
                         <button class="vote-btn ${btnClass}" id="btn-${item.id}" onclick="vote('${item.id}')" ${btnDisabled ? 'disabled' : ''}>${btnText}</button>
                     </div>`;
+
                 gallery.appendChild(card);
-            });
-        } catch (error) { 
-            showError("เกิดข้อผิดพลาด: " + error.message);
-        }
-    }
 
-    function handleTimer(endTimeStr, status) {
-        const timerElem = document.getElementById("timer");
-        if (status === "WAITING") { 
-            timerElem.innerHTML = "<i class='fa-solid fa-hourglass'></i> รอ Admin เปิดโหวต... "; /* แก้ไข . innerHTML */
-            timerElem.style.color = "#d4a017"; 
-            isVotingOpen = false; 
-            return; 
-        }
-        if (status === "CLOSED") { 
-            timerElem.innerHTML = "<i class='fa-solid fa-flag-checkered'></i> การโหวตสิ้นสุดลงแล้ว"; 
-            timerElem.style.color = "#d4a017"; 
-            isVotingOpen = false; 
-            return; 
-        }
-        
-        const endTime = new Date(endTimeStr).getTime(); /* แก้ไข . getTime() */
-        if (isNaN(endTime)) { timerElem.innerHTML = "ไม่พบเวลาปิดโหวต"; isVotingOpen = true; return; }
-
-        const interval = setInterval(() => {
-            const now = new Date().getTime();
-            const distance = endTime - now;
-            
-            if (distance < 0) { 
-                clearInterval(interval); 
-                timerElem.innerHTML = "<i class='fa-solid fa-clock'></i> หมดเวลา"; /* แก้ไข . innerHTML */
-                timerElem.style.color = "#555";
-                isVotingOpen = false; 
-                setTimeout(() => location.reload(), 2000); 
-            } else { 
-                isVotingOpen = true; 
-                const h = Math.floor(distance/3600000); 
-                const m = Math.floor((distance%3600000)/60000); /* แก้ไข Math. floor */
-                const s = Math.floor((distance%60000)/1000);
-                
-                timerElem.innerHTML = `<i class='fa-solid fa-hourglass-half'></i> ปิดโหวตใน: ${h}ชม. ${m}น. ${s}วิ. `;
-                timerElem.style.color = "#f72585"; /* แก้ไข . style */
+                // load metadata lazily (don't block rendering)
+                (async function(it){
+                    const m = await getImageMetadata(it.url);
+                    const el = document.getElementById('meta-'+it.id);
+                    if(!el) return;
+                    // Show file size (KB) and resolution (WxH) if available
+                    const parts = [];
+                    if(m.size) parts.push((m.size/1024).toFixed(1) + ' KB');
+                    if(m.width && m.height) parts.push(m.width + '×' + m.height);
+                    el.textContent = parts.join(' · ');
+                })(item);
             }
-        }, 1000);
+
+        } catch(e){ console.error(e); showError('อัปเดตข้อมูลล้มเหลว'); }
     }
 
-    function vote(itemId) {
-        if (!  isVotingOpen) { showError("การโหวตยังไม่เปิด"); return; }
-        if (! sessionKey) { showError("กรุณา Login"); return; }
-        if (isSubmitting) { showError("กำลังประมวลผล"); return; }
+    function handleTimer(endTimeStr, status){ const timerElem = document.getElementById('timer'); if(status==='WAITING'){ timerElem.innerHTML="<i class='fa-solid fa-hourglass'></i> รอ Admin เปิดโหวต..."; timerElem.style.color='#d4a017'; isVotingOpen=false; return;} if(status==='CLOSED'){ timerElem.innerHTML="<i class='fa-solid fa-flag-checkered'></i> การโหวตสิ้นสุดลงแล้ว"; timerElem.style.color='#d4a017'; isVotingOpen=false; return;} const endTime = new Date(endTimeStr).getTime(); if(isNaN(endTime)){ timerElem.innerHTML='ไม่พบเวลาปิดโหวต'; isVotingOpen=true; return; } let interval = window._vote_timer_interval; if(interval) clearInterval(interval); window._vote_timer_interval = setInterval(()=>{ const now = Date.now(); const distance = endTime - now; if(distance < 0){ clearInterval(window._vote_timer_interval); timerElem.innerHTML="<i class='fa-solid fa-clock'></i> หมดเวลา"; timerElem.style.color='#555'; isVotingOpen=false; setTimeout(()=>location.reload(),2000); } else { isVotingOpen=true; const h = Math.floor(distance/3600000); const m = Math.floor((distance%3600000)/60000); const s = Math.floor((distance%60000)/1000); timerElem.innerHTML = `<i class='fa-solid fa-hourglass-half'></i> ปิดโหวตใน: ${h}ชม. ${m}น. ${s}วิ.`; timerElem.style.color='#f72585'; } },1000); }
 
-        const btnGallery = document.getElementById(`btn-${itemId}`);
-        const btnModal = document.getElementById(`modal-vote-btn`);
+    // vote(itemId, keepOpen=false)
+    // When keepOpen is true (modal vote), do not auto-close modal so user can comment.
+    // This implements optimistic UI + verification: the UI is disabled immediately,
+    // the POST is sent (no-cors), then the client polls the server a few times to
+    // confirm the vote. On success we persist to localStorage; on repeated failure
+    // we roll back the optimistic UI so it doesn't get stuck.
+    function vote(itemId, keepOpen=false){
+        if(!isVotingOpen){ showError('การโหวตยังไม่เปิด'); return; }
+        if(!sessionKey){ showError('กรุณา Login'); return; }
+        if(isSubmitting){ showError('กำลังประมวลผล'); return; }
 
+        const cardBtn = document.getElementById(`btn-${itemId}`);
+        const modalBtn = document.getElementById('modal-vote-btn');
         isSubmitting = true;
-        if(btnGallery) setLoading(btnGallery, true);
-        if(btnModal) setLoading(btnModal, true);
 
-        fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            headers: {'Content-Type':'text/plain'}, 
-            body: JSON.stringify({ action: "vote", session_key: sessionKey, voted_for_id: itemId }) 
-        })
-        .then(() => { 
-            showSuccess("โหวตแล้ว!");
-            
-            setTimeout(() => {
-                loadData();
-                closeModal();
-            }, 2000);
-        })
-        . catch((error) => {
-            showError("เกิดข้อผิดพลาด");
-            isSubmitting = false;
-            if(btnGallery) setLoading(btnGallery, false);
-            if(btnModal) setLoading(btnModal, false);
-        });
+        // Optimistic disable + spinner
+        if(cardBtn) setLoading(cardBtn, true);
+        if(modalBtn) setLoading(modalBtn, true);
+
+        // Mark a pending vote in memory so other code can know
+        window._pendingVote = { itemId: itemId, timestamp: Date.now() };
+
+        // Send POST (no-cors) - we cannot read response reliably from fetch when mode:no-cors
+        fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action:'vote', session_key: sessionKey, voted_for_id: itemId }) })
+        .catch(err => { console.warn('vote POST error', err); });
+
+        // Verification loop: poll server several times to confirm the vote was recorded
+        let attempts = 0;
+        const maxAttempts = 6;
+        const attemptInterval = 1200;
+
+        const verify = async () => {
+            attempts += 1;
+            try{
+                await pollAndUpdate(); // updates window._lastServerData
+                const last = window._lastServerData || {};
+                const votedRemote = (last.userVotes && userProfile) ? last.userVotes[String(userProfile.id)] : null;
+
+                if(votedRemote){
+                    // Vote confirmed by server
+                    localStorage.setItem('vote_voted_for', votedRemote);
+                    // Stop loading state first, then enforce final disabled state so setLoading
+                    // doesn't re-enable the button.
+                    if(cardBtn) setLoading(cardBtn, false);
+                    if(modalBtn) setLoading(modalBtn, false);
+
+                    const confirmedBtn = document.getElementById(`btn-${votedRemote}`);
+                    if(confirmedBtn){ confirmedBtn.innerText = 'โหวตแล้ว'; confirmedBtn.disabled = true; }
+                    // If the original cardBtn refers to a different element, ensure it's disabled
+                    if(cardBtn && String(cardBtn.id) !== `btn-${votedRemote}`){ cardBtn.disabled = true; }
+                    if(modalBtn){ modalBtn.innerText = 'โหวตแล้ว'; modalBtn.disabled = true; }
+
+                    isSubmitting = false;
+                    window._pendingVote = null;
+                    // re-render comments for this item if needed
+                    try{ renderComments(votedRemote); }catch(e){}
+                    // refresh modal content to ensure full sync (author, buttons, meta)
+                    try{ updateModalContent(); }catch(e){}
+                    if(!keepOpen) closeModal();
+                    showSuccess('โหวตแล้ว!');
+                    return;
+                }
+
+                // If server says duplicate (user already voted another), reflect that too
+                if(last && last.userVotes && userProfile && last.userVotes[String(userProfile.id)] !== undefined && last.userVotes[String(userProfile.id)] !== itemId){
+                    localStorage.setItem('vote_voted_for', last.userVotes[String(userProfile.id)]);
+                    // update UI according to server state by forcing a full refresh
+                    await pollAndUpdate();
+                    // stop loading then reflect server state in modal/card
+                    if(cardBtn) setLoading(cardBtn, false);
+                    if(modalBtn) setLoading(modalBtn, false);
+                    // ensure modal reflects server state
+                    try{ updateModalContent(); }catch(e){}
+                    isSubmitting = false;
+                    window._pendingVote = null;
+                    showError('คุณได้โหวตไปแล้วก่อนหน้านี้');
+                    return;
+                }
+
+                if(attempts < maxAttempts){
+                    setTimeout(verify, attemptInterval);
+                    return;
+                }
+
+                // Exhausted attempts: rollback optimistic UI
+                showError('โหวตไม่สำเร็จ (โปรดลองใหม่)');
+                if(cardBtn){ setLoading(cardBtn, false); cardBtn.disabled = false; if(cardBtn.dataset.originalText) cardBtn.innerText = cardBtn.dataset.originalText; else cardBtn.innerText = 'โหวต'; }
+                if(modalBtn){ setLoading(modalBtn, false); modalBtn.disabled = false; modalBtn.innerText = 'โหวต'; }
+                localStorage.removeItem('vote_voted_for');
+                isSubmitting = false;
+                window._pendingVote = null;
+            }catch(err){
+                console.warn('verify error', err);
+                if(attempts < maxAttempts) setTimeout(verify, attemptInterval);
+                else {
+                    showError('โหวตไม่สำเร็จ (โปรดลองใหม่)');
+                    if(cardBtn) setLoading(cardBtn, false);
+                    if(modalBtn) setLoading(modalBtn, false);
+                    localStorage.removeItem('vote_voted_for');
+                    isSubmitting = false;
+                    window._pendingVote = null;
+                }
+            }
+        };
+
+        // start verification shortly after sending
+        setTimeout(verify, 800);
     }
 
-    function openModal(index) {
-        currentImageIndex = index; 
-        updateModalContent();
-        document.getElementById("modal").style.display = "block"; /* แก้ไข . style */
-        document.body.classList.add("modal-open");
-        resetZoom();
+    function openModal(index){
+        currentImageIndex=index; updateModalContent(); document.getElementById('modal').style.display='block'; document.body.classList.add('modal-open'); resetZoom();
+        // start lightweight modal comment poll (updates comments while modal is open)
+        try{ if(window._modal_comment_interval) clearInterval(window._modal_comment_interval); window._modal_comment_interval = setInterval(async ()=>{ try{ const res = await fetch(SCRIPT_URL); const d = await res.json(); window._lastServerData = d; allComments = d.comments || []; renderComments(allItems[currentImageIndex] ? allItems[currentImageIndex].id : null); }catch(e){} }, 3000); }catch(e){}
     }
-    
-    function closeModal() {
-        document.getElementById("modal").style.display = "none";
-        document.body.classList.remove("modal-open"); /* แก้ไข . classList */
-        document.getElementById("commentSheet").classList.remove("active");
-    }
+    function closeModal(){ document.getElementById('modal').style.display='none'; document.body.classList.remove('modal-open'); document.getElementById('commentSheet').classList.remove('active'); if(window._modal_comment_interval){ clearInterval(window._modal_comment_interval); window._modal_comment_interval = null; } }
 
-    function updateModalContent() {
-        if (allItems.length === 0) return;
-        const item = allItems[currentImageIndex];
-        document.getElementById("img01").src = item.url;
-        
-        const authorSpan = document.querySelector("#modal-author span");
-        if (authorSpan) {
-            authorSpan.innerText = item.author;
-        }
+    async function updateModalContent(){ if(allItems.length===0) return; const item = allItems[currentImageIndex]; const img = document.getElementById('img01'); img.src=''; // reset
+        // load full-size image, wait for natural size
+        img.src = item.url; img.style.maxWidth='95%'; img.style.maxHeight='95%'; img.onload = ()=>{ /* nothing extra needed - user can pan/zoom */ };
+        const authorSpan = document.querySelector('#modal-author span'); if(authorSpan) authorSpan.innerText = item.author;
+        const btn = document.getElementById('modal-vote-btn'); btn.onclick = ()=> vote(item.id, true);
+        btn.classList.remove('waiting'); if(serverStatusGlobal==='CLOSED'){ btn.innerText='จบ'; btn.disabled=true; } else if(serverStatusGlobal==='WAITING'){ btn.innerText='รอเปิดโหวต'; btn.disabled=true; btn.classList.add('waiting'); } else { // check if user already voted
+            const localV = localStorage.getItem('vote_voted_for');
+            const votedRemote = (window._lastServerData && window._lastServerData.userVotes && userProfile && Object.prototype.hasOwnProperty.call(window._lastServerData.userVotes, String(userProfile.id))) ? window._lastServerData.userVotes[String(userProfile.id)] : null;
+            // If server provided `userVotes` but no entry for the user, ensure
+            // we don't treat a stale local cache as authoritative.
+            let userVoted = null;
+            if (votedRemote !== null && votedRemote !== undefined) {
+                userVoted = votedRemote;
+            } else if (!window._lastServerData || !window._lastServerData.userVotes) {
+                userVoted = localV;
+            } else {
+                // server provided userVotes and it doesn't include this user
+                // -> clear stale local cache
+                localStorage.removeItem('vote_voted_for');
+                userVoted = null;
+            }
 
-        const btn = document.getElementById("modal-vote-btn");
-        btn.onclick = () => vote(item.id);
-        
-        btn.classList.remove('waiting');
-        if (serverStatusGlobal === "CLOSED") { 
-            btn.innerText = "จบ"; 
-            btn.disabled = true; 
-        }
-        else if (serverStatusGlobal === "WAITING") { 
-            btn.innerText = "รอเปิดโหวต"; 
-            btn.disabled = true; 
-            btn.classList.add('waiting'); 
-        }
-        else { 
-            btn.innerText = "โหวต"; 
-            btn.disabled = ! isVotingOpen; 
-        }
-
+            if(userVoted){ if(String(userVoted)===String(item.id)){ btn.innerText='โหวตแล้ว'; btn.disabled=true; } else { btn.innerText='โหวต'; btn.disabled=true; } } else { btn.innerText='โหวต'; btn.disabled=!isVotingOpen; } }
         renderComments(item.id);
-    }
-
-    function changeImage(n) {
-        currentImageIndex += n;
-        if (currentImageIndex >= allItems.length) currentImageIndex = 0;
-        if (currentImageIndex < 0) currentImageIndex = allItems.length - 1;
-        resetZoom();
-        updateModalContent();
-    }
-
-    function renderComments(imageId) {
-        const normalizedImageId = normalizeId(imageId);
-        const comments = allComments.filter(c => normalizeId(c.imageId) === normalizedImageId);
-        document.getElementById("comment-count-badge").innerText = comments.length;
-        
-        const list = document.getElementById("comments-list");
-        list.innerHTML = "";
-        if (comments.length === 0) {
-            list.innerHTML = "<div style='text-align:center; color:#ccc; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>";
-        } else {
-            comments.forEach(c => {
-                const userId = normalizeId(c.userId);
-                const avatar = c.avatar ? `https://cdn.discordapp.com/avatars/${userId}/${c.avatar}.png` : `https://cdn.discordapp. com/embed/avatars/0.png`;
-                const time = new Date(c.timestamp).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-                list.insertAdjacentHTML('beforeend', `
-                    <div class="comment-item">
-                        <img src="${avatar}" class="comment-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-                        <div class="comment-bubble">
-                            <div class="comment-user">${c.username}</div>
-                            <div class="comment-text">${c.text}</div>
-                            <div class="comment-time">${time}</div>
-                        </div>
-                    </div>
-                `);
-            });
+        // populate modal meta (show more details including the server path/ID)
+        const meta = await getImageMetadata(item.url);
+        const metaElem = document.querySelector('#modal .bottom-info');
+        if(metaElem){
+            // Modal shows file size and resolution when available
+            const small = metaElem.querySelector('small');
+            const parts = [];
+            if(meta.size) parts.push((meta.size/1024).toFixed(1) + ' KB');
+            if(meta.width && meta.height) parts.push(meta.width + '×' + meta.height);
+            const sizeText = parts.join(' · ');
+            if(small) small.textContent = sizeText;
+            else if(sizeText) metaElem.insertAdjacentHTML('beforeend', `<small style="display:block; color:#777; margin-top:6px;">${sizeText}</small>`);
         }
-        
-        document.getElementById("comment-input-area").style.display = sessionKey ? "flex" : "none";
-        document.getElementById("login-warning").style.display = sessionKey ?  "none" : "block";
     }
 
-    function sendComment() {
-        if (!sessionKey) return;
-        if (isSubmitting) { showError("กำลังประมวลผล"); return; }
+    function changeImage(n){ currentImageIndex += n; if(currentImageIndex >= allItems.length) currentImageIndex = 0; if(currentImageIndex < 0) currentImageIndex = allItems.length -1; resetZoom(); updateModalContent(); }
 
-        const input = document.getElementById("comment-input");
-        const text = input.value.trim();
-        const item = allItems[currentImageIndex];
-        
-        if (! text) { showError("กรุณาพิมพ์ความคิดเห็น"); return; }
-        if (! item) { showError("ไม่พบรูปภาพ"); return; }
+    function renderComments(imageId){ const normalized = normalizeId(imageId); const comments = allComments.filter(c => normalizeId(c.imageId) === normalized); document.getElementById('comment-count-badge').innerText = comments.length; const list = document.getElementById('comments-list'); list.innerHTML=''; if(comments.length===0){ list.innerHTML = "<div style='text-align:center; color:#ccc; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>"; } else { comments.forEach(c=>{ const uid = normalizeId(c.userId); const avatar = c.avatar ? `https://cdn.discordapp.com/avatars/${uid}/${c.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'; const time = new Date(c.timestamp).toLocaleString('th-TH',{ day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); list.insertAdjacentHTML('beforeend', `<div class="comment-item"><img src="${avatar}" class="comment-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"><div class="comment-bubble"><div class="comment-user">${c.username}</div><div class="comment-text">${c.text}</div><div class="comment-time">${time}</div></div></div>`); }); }
+        document.getElementById('comment-input-area').style.display = sessionKey ? 'flex' : 'none'; document.getElementById('login-warning').style.display = sessionKey ? 'none' : 'block'; }
 
-        isSubmitting = true;
-        const btn = document.getElementById("send-comment-btn");
-        setLoading(btn, true);
-        input.disabled = true;
+    function sendComment(){ if(!sessionKey) return; if(isSubmitting){ showError('กำลังประมวลผล'); return; } const input = document.getElementById('comment-input'); const text = input.value.trim(); const item = allItems[currentImageIndex]; if(!text){ showError('กรุณาพิมพ์ความคิดเห็น'); return; } if(!item){ showError('ไม่พบรูปภาพ'); return; } isSubmitting=true; const btn=document.getElementById('send-comment-btn'); setLoading(btn,true); input.disabled=true; const payload = JSON.stringify({ action:'add_comment', session_key: sessionKey, image_id: item.id, comment: text }); fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body: payload }).then(()=>{ input.value=''; showSuccess('ส่งความคิดเห็นแล้ว!'); setTimeout(()=>{ pollAndUpdate(); setLoading(btn,false); input.disabled=false; isSubmitting=false; input.focus(); },800); }).catch(e=>{ showError('ส่งไม่สำเร็จ'); setLoading(btn,false); input.disabled=false; isSubmitting=false; }); }
 
-        const payload = JSON.stringify({ 
-            action: "add_comment", 
-            session_key: sessionKey, 
-            image_id: item.id, 
-            comment: text 
-        });
+    function openPrivacyModal(){ document.getElementById('privacyModal').style.display='block'; }
+    function closePrivacyModal(){ document.getElementById('privacyModal').style.display='none'; }
+    window.onclick = function(e){ if(e.target == document.getElementById('modal')) closeModal(); if(e.target == document.getElementById('privacyModal')) closePrivacyModal(); }
 
-        fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            headers: {'Content-Type':'text/plain'}, 
-            body: payload 
-        })
-        .then(() => {
-            input.value = "";
-            showSuccess("ส่งความคิดเห็นแล้ว!");
-            
-            // ✅ รีโหลด allComments จาก Sheet
-            setTimeout(() => {
-                fetch(SCRIPT_URL)
-                    .then(r => r.json())
-                    .then(data => {
-                        allComments = data.comments || [];
-                        renderComments(item.id); // ✅ แสดงคอมเมนต์ใหม่
-                        setLoading(btn, false);
-                        input.disabled = false;
-                        isSubmitting = false;
-                        input.focus();
-                    });
-            }, 500);
-        })
-        .catch((error) => {
-            showError("ส่งไม่สำเร็จ");
-            setLoading(btn, false);
-            input.disabled = false;
-            isSubmitting = false;
-        });
-    }
+    // keep last server data for modal vote checks
+    window._lastServerData = null;
 
-    function openPrivacyModal() { document.getElementById("privacyModal").style.display = "block"; }
-    function closePrivacyModal() { document.getElementById("privacyModal").style.display = "none"; }
-
-    window.onclick = function(event) {
-        if (event.target == document.getElementById("modal")) closeModal();
-        if (event.target == document.getElementById("privacyModal")) closePrivacyModal();
-    }
-
-    // Init
-    checkLogin();
-    loadData();
+    // Kickoff
+    checkLogin(); loadData();
 
 </script>
 
