@@ -683,28 +683,13 @@
         
         const list = document.getElementById("comments-list");
         list.innerHTML = "";
-        
         if (comments.length === 0) {
             list.innerHTML = "<div style='text-align:center; color:#ccc; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>";
         } else {
             comments.forEach(c => {
                 const userId = normalizeId(c.userId);
-                const avatar = c.avatar ? 
-                    `https://cdn. discordapp.com/avatars/${userId}/${c.avatar}. png` : 
-                    `https://cdn.discordapp. com/embed/avatars/0.png`;
-                
-                let time = "";
-                try {
-                    time = new Date(c.timestamp). toLocaleString('th-TH', { 
-                        day: 'numeric', 
-                        month: 'short', 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                } catch (e) {
-                    time = c.timestamp || "ไม่ทราบเวลา";
-                }
-                
+                const avatar = c.avatar ? `https://cdn.discordapp.com/avatars/${userId}/${c.avatar}.png` : `https://cdn.discordapp. com/embed/avatars/0.png`;
+                const time = new Date(c.timestamp).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
                 list.insertAdjacentHTML('beforeend', `
                     <div class="comment-item">
                         <img src="${avatar}" class="comment-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
@@ -723,11 +708,11 @@
     }
 
     function sendComment() {
-        if (! sessionKey) return;
+        if (!sessionKey) return;
         if (isSubmitting) { showError("กำลังประมวลผล"); return; }
 
         const input = document.getElementById("comment-input");
-        const text = input. value.trim();
+        const text = input.value.trim();
         const item = allItems[currentImageIndex];
         
         if (! text) { showError("กรุณาพิมพ์ความคิดเห็น"); return; }
@@ -739,9 +724,9 @@
         input.disabled = true;
 
         const payload = JSON.stringify({ 
-            action: "add_comment",
+            action: "add_comment", 
             session_key: sessionKey, 
-            image_id: item. id, 
+            image_id: item.id, 
             comment: text 
         });
 
@@ -752,31 +737,22 @@
             body: payload 
         })
         .then(() => {
-            const now = new Date();
-            const timeString = now.toLocaleString('th-TH', { 
-                day: 'numeric', 
-                month: 'short', 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            allComments.push({ 
-                timestamp: now.toISOString(), 
-                imageId: item. id, 
-                userId: userProfile.id, 
-                username: userProfile.username, 
-                avatar: userProfile. avatar, 
-                text: text
-            });
-            
-            renderComments(item.id); 
             input.value = "";
             showSuccess("ส่งความคิดเห็นแล้ว!");
             
-            setLoading(btn, false);
-            input.disabled = false;
-            isSubmitting = false;
-            input.focus();
+            // ✅ รีโหลด allComments จาก Sheet
+            setTimeout(() => {
+                fetch(SCRIPT_URL)
+                    .then(r => r.json())
+                    .then(data => {
+                        allComments = data.comments || [];
+                        renderComments(item.id); // ✅ แสดงคอมเมนต์ใหม่
+                        setLoading(btn, false);
+                        input.disabled = false;
+                        isSubmitting = false;
+                        input.focus();
+                    });
+            }, 500);
         })
         .catch((error) => {
             showError("ส่งไม่สำเร็จ");
