@@ -640,26 +640,29 @@
     function updateModalContent() {
         if (allItems.length === 0) return;
         const item = allItems[currentImageIndex];
-        const img = document.getElementById("img01");
+        document.getElementById("img01").src = item.url;
         
-        img.src = item.url;
-        document.getElementById("modal-author").innerHTML = `<i class="fa-solid fa-user-pen"></i> ${item.author}`;
+        const authorSpan = document.querySelector("#modal-author span");
+        if (authorSpan) {
+            authorSpan.innerText = item.author;
+        }
+
+        const btn = document.getElementById("modal-vote-btn");
+        btn.onclick = () => vote(item.id);
         
-        const voteBtn = document.getElementById("modal-vote-btn");
-        voteBtn.onclick = () => vote(item.id);
-        
-        if (serverStatusGlobal === "WAITING") { 
-            voteBtn.innerText = "รอเปิดโหวต"; 
-            voteBtn.classList.add("waiting"); 
-            voteBtn.disabled = true; 
-        } else if (serverStatusGlobal === "CLOSED") { 
-            voteBtn.innerText = "จบการโหวต"; 
-            voteBtn.classList.remove("waiting");
-            voteBtn.disabled = true; 
-        } else {
-            voteBtn.innerText = "โหวต";
-            voteBtn.classList.remove("waiting");
-            voteBtn.disabled = false;
+        btn.classList.remove('waiting');
+        if (serverStatusGlobal === "CLOSED") { 
+            btn.innerText = "จบ"; 
+            btn.disabled = true; 
+        }
+        else if (serverStatusGlobal === "WAITING") { 
+            btn.innerText = "รอเปิดโหวต"; 
+            btn.disabled = true; 
+            btn.classList.add('waiting'); 
+        }
+        else { 
+            btn.innerText = "โหวต"; 
+            btn.disabled = ! isVotingOpen; 
         }
 
         renderComments(item.id);
@@ -674,74 +677,112 @@
     }
 
     function renderComments(imageId) {
+        const normalizedImageId = normalizeId(imageId);
+        const comments = allComments.filter(c => normalizeId(c.imageId) === normalizedImageId);
+        document.getElementById("comment-count-badge").innerText = comments.length;
+        
         const list = document.getElementById("comments-list");
-        const filtered = allComments.filter(c => normalizeId(c.imageId) === normalizeId(imageId));
+        list.innerHTML = "";
         
-        document.getElementById("comment-count-badge").innerText = filtered.length;
-        
-        if (filtered.length === 0) {
-            list.innerHTML = "<div style='text-align:center; color:#999; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>";
+        if (comments.length === 0) {
+            list.innerHTML = "<div style='text-align:center; color:#ccc; margin-top:20px;'>ยังไม่มีความคิดเห็น</div>";
         } else {
-            list.innerHTML = filtered.map(c => `
-                <div class="comment-item">
-                    <img src="${c.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="comment-avatar">
-                    <div class="comment-bubble">
-                        <div class="comment-user">${c.username}</div>
-                        <div class="comment-text">${c.text}</div>
-                        <div class="comment-time">${c.time}</div>
+            comments.forEach(c => {
+                const userId = normalizeId(c.userId);
+                const avatar = c.avatar ? 
+                    `https://cdn. discordapp.com/avatars/${userId}/${c.avatar}. png` : 
+                    `https://cdn.discordapp. com/embed/avatars/0.png`;
+                
+                let time = "";
+                try {
+                    time = new Date(c.timestamp). toLocaleString('th-TH', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                } catch (e) {
+                    time = c.timestamp || "ไม่ทราบเวลา";
+                }
+                
+                list.insertAdjacentHTML('beforeend', `
+                    <div class="comment-item">
+                        <img src="${avatar}" class="comment-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                        <div class="comment-bubble">
+                            <div class="comment-user">${c.username}</div>
+                            <div class="comment-text">${c.text}</div>
+                            <div class="comment-time">${time}</div>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `);
+            });
         }
         
-        const inputArea = document.getElementById("comment-input-area");
-        const warning = document.getElementById("login-warning");
-        if (sessionKey) {
-            inputArea.style.display = "flex";
-            warning.style.display = "none";
-        } else {
-            inputArea.style.display = "none";
-            warning.style.display = "block";
-        }
+        document.getElementById("comment-input-area").style.display = sessionKey ? "flex" : "none";
+        document.getElementById("login-warning").style.display = sessionKey ?  "none" : "block";
     }
 
     function sendComment() {
-        if (!sessionKey) return;
+        if (! sessionKey) return;
+        if (isSubmitting) { showError("กำลังประมวลผล"); return; }
+
         const input = document.getElementById("comment-input");
-        const text = input.value.trim();
-        if (!text) return;
-
-        const currentItem = allItems[currentImageIndex];
-        const sendBtn = document.getElementById("send-comment-btn");
+        const text = input. value.trim();
+        const item = allItems[currentImageIndex];
         
-        setLoading(sendBtn, true, '<i class="fa-solid fa-paper-plane"></i>');
+        if (! text) { showError("กรุณาพิมพ์ความคิดเห็น"); return; }
+        if (! item) { showError("ไม่พบรูปภาพ"); return; }
 
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {'Content-Type':'text/plain'},
-            body: JSON.stringify({ action: "comment", session_key: sessionKey, image_id: currentItem.id, text: text })
+        isSubmitting = true;
+        const btn = document.getElementById("send-comment-btn");
+        setLoading(btn, true);
+        input.disabled = true;
+
+        const payload = JSON.stringify({ 
+            action: "add_comment",
+            session_key: sessionKey, 
+            image_id: item. id, 
+            comment: text 
+        });
+
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            headers: {'Content-Type':'text/plain'}, 
+            body: payload 
         })
         .then(() => {
-            input.value = "";
-            showSuccess("ส่งความคิดเห็นแล้ว");
-            
-            // Add Optimistic UI
             const now = new Date();
-            const timeString = `${now.getDate()}/${now.getMonth()+1} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-            allComments.push({
-                imageId: currentItem.id,
-                username: userProfile.username,
-                avatar: userProfile.avatar ? `https://cdn.discordapp.com/avatars/${userProfile.id}/${userProfile.avatar}.png` : null,
-                text: text,
-                time: timeString
+            const timeString = now.toLocaleString('th-TH', { 
+                day: 'numeric', 
+                month: 'short', 
+                hour: '2-digit', 
+                minute: '2-digit' 
             });
-            renderComments(currentItem.id);
-            setLoading(sendBtn, false, '<i class="fa-solid fa-paper-plane"></i>');
+            
+            allComments.push({ 
+                timestamp: now.toISOString(), 
+                imageId: item. id, 
+                userId: userProfile.id, 
+                username: userProfile.username, 
+                avatar: userProfile. avatar, 
+                text: text
+            });
+            
+            renderComments(item.id); 
+            input.value = "";
+            showSuccess("ส่งความคิดเห็นแล้ว!");
+            
+            setLoading(btn, false);
+            input.disabled = false;
+            isSubmitting = false;
+            input.focus();
         })
-        .catch(() => {
+        .catch((error) => {
             showError("ส่งไม่สำเร็จ");
-            setLoading(sendBtn, false, '<i class="fa-solid fa-paper-plane"></i>');
+            setLoading(btn, false);
+            input.disabled = false;
+            isSubmitting = false;
         });
     }
 
