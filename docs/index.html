@@ -235,11 +235,13 @@
         .prev:hover, .next:hover { background-color: rgba(255, 255, 255, 0.3); } /* แก้ไข . prev:hover */
         .close { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 1020; } /* แก้ไข . close */
 
-        .privacy-box { background: white; width: 90%; max-width: 600px; margin: 10vh auto; padding: 40px; border-radius: 20px; text-align: left; position: relative; animation: zoomIn 0.3s ease; }
+        .privacy-box{background:white;width:90%;max-width:600px;margin:2.5vh auto;padding:40px;border-radius:20px;text-align:left;position:relative;animation:zoomIn .3s ease;box-sizing:border-box;max-height:calc(100vh - 60px)}
         .info-toggle { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background: #2b2d42; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 900; transition: 0.3s; }
         .privacy-box .close-btn-inner { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 10px; } /* แก้ไข . close-btn-inner */
         .contact-link { color: var(--secondary-color); font-weight: bold; text-decoration: none; }
         .contact-link:hover { text-decoration: underline; }
+
+        @media(max-width:600px){.privacy-box{padding:20px;border-radius:16px;overflow-y:auto}.privacy-box h2,.privacy-box h3{font-size:1.15rem}.privacy-box p{font-size:.95rem;line-height:1.5}.privacy-box .close-btn-inner{width:100%;float:none;padding:12px;margin-top:20px}}
         
         @keyframes slideUp { from {transform:translate(-50%, 20px); opacity:0} to {transform:translate(-50%, 0); opacity:1} }
         @keyframes zoomIn { from {transform:scale(0.8); opacity:0} to {transform:scale(1); opacity:1} }
@@ -335,7 +337,7 @@
                 ทางเราและศิลปินขอสงวนสิทธิ์ในผลงานของตนเอง
             </p>
 
-            <h3><i class="fa-solid fa-image" style="color:#00b4d8;"></i> ปัญหาเกี่ยวกับรูปภาพและการลดขนาดไฟล์</h3>
+            <h3><i class="fa-solid fa-image" style="color:#00b4d8;"></i> รูปภาพและการลดขนาดไฟล์</h3>
             <p>
                 เพื่อให้เว็บไซต์ใช้งานได้อย่างรวดเร็วและรองรับผู้ใช้งานจำนวนมาก 
                 อาจมีการ <strong>ลดขนาดรูปภาพ (Image Compression / Resize)</strong> โดยอัตโนมัติ 
